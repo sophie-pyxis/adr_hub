@@ -4,7 +4,9 @@
 
 **ADR Hub** is an enterprise-grade Architecture Decision Record (ADR) management system designed to transform architecture governance from scattered markdown files into a queryable, auditable system. This handbook provides solution architects and enterprise architects with comprehensive guidance for implementing, operating, and extending the ADR Hub platform.
 
-*Insights in this handbook are informed by industry practices and the experience of Scarlet Rose, Solutions Architect at Itaú, on the practical application of architecture governance in enterprise environments.*
+**Author**: Sophie Pyxis ([LinkedIn](https://www.linkedin.com/in/sophie-pyxis) | [GitHub](https://github.com/sophie-pyxis))
+
+*Reference contributions and insights from Scarlet Rose, Solutions Architect at Itaú: [LinkedIn](https://www.linkedin.com/in/scarletrose/) | [GitHub](https://github.com/scarletquasar) | [YouTube Channel](https://www.youtube.com/watch?v=MYq4v6S8BHE)*
 
 ---
 
@@ -492,484 +494,573 @@ flowchart TD
 
 ## 9. Integration Patterns
 
-### 9.1 CI/CD Integration
+ADR Hub is currently a standalone FastAPI application running locally or on GitHub. The following integration patterns represent future capabilities that can be built on top of the existing API.
+
+### 9.1 Current CI/CD Integration
+ADR Hub includes a GitHub Actions CI/CD pipeline that runs automatically on pushes and pull requests:
+
 ```yaml
-# GitHub Actions Integration Example
+# .github/workflows/ci.yml
+name: CI/CD Pipeline
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
 jobs:
-  architecture-compliance:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest pytest-cov
+      - name: Run tests with coverage
+        run: python -m pytest tests/ -v --cov=src --cov-report=xml
+      - name: Check coverage threshold
+        run: python -m pytest tests/ --cov=src --cov-fail-under=74
+  
+  lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Check ADR requirements
-        run: |
-          curl -X POST ${{ secrets.ADR_HUB_URL }}/api/health/compliance-check \
-            -H "Authorization: Bearer ${{ secrets.ADR_HUB_TOKEN }}" \
-            -d '{"project": "${{ github.repository }}", "branch": "${{ github.ref }}"}'
-      
-      - name: Create ADR for breaking changes
-        if: contains(github.event.head_commit.message, 'BREAKING')
-        run: |
-          curl -X POST ${{ secrets.ADR_HUB_URL }}/api/artifacts \
-            -H "Authorization: Bearer ${{ secrets.ADR_HUB_TOKEN }}" \
-            -d '{
-              "artifact_type": "adr",
-              "title": "Breaking Change: ${{ github.event.head_commit.message }}",
-              "level": 3,
-              "squad_id": "${{ vars.TEAM_ID }}"
-            }'
+      - uses: actions/checkout@v4
+      - name: Install linting tools
+        run: pip install black flake8 isort mypy
+      - name: Check code formatting with black
+        run: black --check src/ tests/
+      - name: Lint with flake8
+        run: flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+      - name: Check import sorting with isort
+        run: isort --check-only src/ tests/ --profile=black
+  
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install security tools
+        run: pip install bandit safety
+      - name: Run bandit security scan
+        run: bandit -r src/ -f json -o bandit-report.json || true
 ```
 
-### 9.2 IDE Integration
-- **VS Code Extension**: ADR creation and management
-- **JetBrains Plugin**: Integration with IntelliJ, PyCharm
-- **CLI Tool**: Command-line interface for automation
+### 9.2 Planned Future Integrations
+The following integrations are planned for future releases and can be built using the existing REST API:
 
-### 9.3 Project Management Integration
-- **Jira Integration**: Link ADRs to Jira tickets
-- **Linear Integration**: Sync with Linear issues
-- **Azure DevOps**: Integration with Azure Boards
+#### 9.2.1 IDE Integration (Planned)
+- **VS Code Extension**: ADR creation and management directly from the editor
+- **JetBrains Plugin**: Integration with IntelliJ, PyCharm, and other JetBrains IDEs
+- **CLI Tool**: Command-line interface for automation and scripting
 
-### 9.4 Documentation Integration
-- **MkDocs/ReadTheDocs**: Automatic documentation generation
-- **Confluence Integration**: Sync ADRs to Confluence
-- **GitHub Pages**: Automatic publication of architecture docs
+#### 9.2.2 Project Management Integration (Planned)
+- **Jira Integration**: Link ADRs to Jira tickets for traceability
+- **Linear Integration**: Sync with Linear issues for agile teams
+- **Azure DevOps**: Integration with Azure Boards for enterprise workflows
 
----
+#### 9.2.3 Documentation Integration (Planned)
+- **MkDocs/ReadTheDocs**: Automatic documentation generation from artifacts
+- **Confluence Integration**: Sync ADRs to Confluence for wider visibility
+- **GitHub Pages**: Automatic publication of architecture documentation
 
-## 10. Deployment Architecture
+### 9.3 Building Custom Integrations
+The REST API provides all necessary endpoints for building custom integrations:
+- **Artifact Management**: CRUD operations for all 7 artifact types
+- **Search & Filtering**: Full-text search and advanced filtering
+- **Health Monitoring**: System status and compliance checks
+- **Trigger Automation**: Rule-based automation and notifications
 
-### 10.1 Development Environment
-```yaml
-# docker-compose.dev.yml
-services:
-  api:
-    build: .
-    ports: ["8000:8000"]
-    environment:
-      DATABASE_URL: sqlite:///./locale/governance.db
-      ENVIRONMENT: development
-    volumes:
-      - ./:/app
-      - ./locale:/app/locale
-      - ./architecture:/app/architecture
-  
-  # Development tools
-  pgadmin:
-    image: dpage/pgadmin4
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports: ["5050:80"]
-```
-
-### 10.2 Production Environment
-```yaml
-# docker-compose.prod.yml
-services:
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
-    ports: ["8000:8000"]
-    environment:
-      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db/adr_hub
-      REDIS_URL: redis://redis:6379/0
-      ENVIRONMENT: production
-      SECRET_KEY: ${SECRET_KEY}
-    depends_on:
-      - db
-      - redis
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/liveness"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-  
-  db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: adr_hub
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-  
-  redis:
-    image: redis:7-alpine
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-  
-  nginx:
-    image: nginx:alpine
-    ports: ["80:80", "443:443"]
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl
-    depends_on:
-      - api
-
-volumes:
-  postgres_data:
-  redis_data:
-```
-
-### 10.3 High Availability Architecture
-
-```mermaid
-flowchart TD
-    LB[Load Balancer<br/>HAProxy/Nginx with SSL Termination]
-    
-    subgraph Region1["Region: us-east-1"]
-        API1[API Instance 1]
-        Redis1[Redis Cluster<br/>Primary/Replica]
-    end
-    
-    subgraph Region2["Region: us-west-2"]
-        API2[API Instance 2]
-        PG2[PostgreSQL Read Replica]
-    end
-    
-    subgraph Database["Database Layer"]
-        PGPrimary[PostgreSQL Primary<br/>Multi-AZ Deployment]
-        S3[Automated Backups to S3]
-    end
-    
-    LB --> API1
-    LB --> API2
-    API1 --> Redis1
-    API2 --> PG2
-    Redis1 --> PGPrimary
-    PG2 --> PGPrimary
-    PGPrimary --> S3
-```
-
-### 10.4 Disaster Recovery
-- **RTO (Recovery Time Objective)**: 4 hours
-- **RPO (Recovery Point Objective)**: 1 hour
-- **Backup Strategy**: Daily full + hourly incremental
-- **Failover Strategy**: Automated regional failover
-- **Data Replication**: Cross-region async replication
-
----
-
-## 11. Security Architecture
-
-### 11.1 Authentication & Authorization
+Example integration code:
 ```python
-# Planned JWT Authentication
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import requests
 
-security = HTTPBearer()
-
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-) -> User:
-    token = credentials.credentials
-    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    user = get_user_from_db(payload["sub"])
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    return user
-
-# Role-based authorization
-def require_role(required_role: str):
-    def role_checker(current_user: User = Depends(get_current_user)):
-        if current_user.role != required_role:
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
-        return current_user
-    return role_checker
-```
-
-### 11.2 Security Controls
-
-#### 7.2.1 Input Validation
-- **Pydantic Models**: Type validation at API boundaries
-- **SQL Injection Prevention**: Parameterized queries via SQLModel
-- **XSS Prevention**: Output encoding in templates
-- **File Upload Security**: Whitelist validation, virus scanning
-
-#### 7.2.2 Data Protection
-- **Encryption at Rest**: Database encryption, file system encryption
-- **Encryption in Transit**: TLS 1.3, perfect forward secrecy
-- **Secrets Management**: Environment variables, secrets manager integration
-- **Audit Logging**: Comprehensive security event logging
-
-#### 7.2.3 Access Control
-- **Role-Based Access Control (RBAC)**: Viewer, Editor, Tech Lead, Architect, Admin
-- **Attribute-Based Access Control (ABAC)**: Fine-grained permissions
-- **Team-Based Isolation**: Squad-level data segregation
-- **Time-Based Access**: Temporary access grants
-
-### 11.3 Compliance Controls
-- **LGPD/HIPAA Compliance**: Data minimization, consent management
-- **SOC 2 Controls**: Security, availability, processing integrity
-- **GDPR Compliance**: Right to erasure, data portability
-- **PCI DSS**: Payment card data protection (if applicable)
-
----
-
-## 12. Monitoring & Observability
-
-### 12.1 Health Monitoring
-```python
-# Health Service Implementation
-class HealthService:
-    async def check_database_health(self) -> HealthCheck:
-        """Check database connectivity and performance."""
-        start_time = time.time()
-        try:
-            # Check connection and query performance
-            result = await self.session.execute(text("SELECT 1"))
-            response_time = (time.time() - start_time) * 1000
-            
-            return HealthCheck(
-                name="database",
-                status="healthy" if result.scalar() == 1 else "unhealthy",
-                response_time_ms=response_time,
-                details={
-                    "connection_pool_size": self.engine.pool.size(),
-                    "active_connections": self.engine.pool.checkedin(),
-                }
-            )
-        except Exception as e:
-            return HealthCheck(
-                name="database",
-                status="unhealthy",
-                error=str(e),
-                response_time_ms=(time.time() - start_time) * 1000
-            )
-```
-
-### 12.2 Metrics Collection
-```python
-# Prometheus Metrics
-from prometheus_fastapi_instrumentator import Instrumentator
-
-# Instrument the FastAPI app
-Instrumentator().instrument(app).expose(app)
-
-# Custom metrics
-artifacts_created = Counter(
-    "adr_hub_artifacts_created_total",
-    "Total number of artifacts created",
-    ["artifact_type", "squad"]
-)
-
-api_request_duration = Histogram(
-    "adr_hub_api_request_duration_seconds",
-    "API request duration in seconds",
-    ["endpoint", "method", "status_code"]
+# Create ADR via API
+response = requests.post(
+    "http://localhost:8000/api/artifacts",
+    json={
+        "artifact_type": "adr",
+        "title": "Integration Example",
+        "level": 3,
+        "content": "Example content",
+        "squad_id": 1
+    }
 )
 ```
 
-### 12.3 Logging Strategy
+---
+
+## 10. Development & Local Deployment
+
+### 10.1 Local Development Setup
+
+ADR Hub is designed as a development tool for architecture governance, currently deployed as a local FastAPI application with SQLite database. The primary deployment model is local development with the following setup:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/sophie-pyxis/adr_hub.git
+cd adr_hub
+
+# 2. Create virtual environment
+python -m venv venv
+
+# 3. Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On Unix/Mac:
+source venv/bin/activate
+
+# 4. Install dependencies
+pip install -r requirements.txt
+
+# 5. Initialize the database
+# The database is automatically created on first run
+python -c "from src.database import create_db_and_tables; create_db_and_tables()"
+
+# 6. Run the application
+python src/main.py
+
+# Server runs at: http://localhost:8000
+# API documentation: http://localhost:8000/docs
+```
+
+### 10.2 Project Structure for Local Development
+
+```
+adr_hub/
+├── src/                    # Source code
+│   ├── main.py            # FastAPI application entry point
+│   ├── api/               # API routes
+│   ├── models/            # SQLModel database models
+│   ├── services/          # Business logic services
+│   └── database.py        # Database configuration
+├── locale/                # Local data storage
+│   └── governance.db      # SQLite database (auto-created)
+├── templates/             # Markdown templates for artifacts
+├── architecture/          # Artifact storage directory
+├── tests/                 # Test suite
+├── requirements.txt       # Python dependencies
+└── pytest.ini            # Test configuration
+```
+
+### 10.3 Database Configuration
+
+The application uses SQLite for local development with automatic database creation:
+
 ```python
-# Structured Logging
-import structlog
+# src/database.py
+from sqlmodel import SQLModel, create_engine, Session
 
-logger = structlog.get_logger()
+# SQLite database for local development
+DATABASE_URL = "sqlite:///./locale/governance.db"
+engine = create_engine(DATABASE_URL, echo=True)
 
-async def create_artifact(artifact_data: ArtifactCreate):
-    """Create artifact with comprehensive logging."""
-    logger.info(
-        "artifact_creation_started",
-        artifact_type=artifact_data.artifact_type,
-        squad_id=artifact_data.squad_id,
-        user_id=current_user.id
-    )
+def create_db_and_tables():
+    """Create all database tables on application startup."""
+    SQLModel.metadata.create_all(engine)
+
+def get_session():
+    """Get database session for dependency injection."""
+    with Session(engine) as session:
+        yield session
+```
+
+### 10.4 Planned Deployment Options (Future)
+
+**Note**: The following deployment options are planned for future development but are not currently implemented:
+
+1. **Docker Containerization** (Planned):
+   ```dockerfile
+   # Example Dockerfile (planned)
+   FROM python:3.11-slim
+   WORKDIR /app
+   COPY requirements.txt .
+   RUN pip install --no-cache-dir -r requirements.txt
+   COPY . .
+   CMD ["python", "src/main.py"]
+   ```
+
+2. **Cloud Deployment** (Planned):
+   - AWS ECS/EKS with Fargate
+   - Azure App Service
+   - Google Cloud Run
+
+3. **CI/CD Pipeline** (Currently Implemented):
+   - GitHub Actions for testing, linting, and security scanning
+   - Automatic test execution on push/pull request
+   - 74% minimum test coverage requirement
+
+---
+
+## 11. Security & Compliance
+
+### 11.1 Current Security Implementation
+
+ADR Hub is designed as a local development tool with basic security measures appropriate for its use case:
+
+1. **Input Validation**: All API endpoints use Pydantic models for type validation
+2. **SQL Injection Prevention**: SQLModel ORM with parameterized queries
+3. **CORS Configuration**: Configured for local development with permissive CORS settings
+4. **Environment Variables**: Configuration via environment variables (planned for future)
+
+### 11.2 Security Controls in Development Environment
+
+#### 11.2.1 API Security
+- **Input Validation**: Pydantic models validate all API requests
+- **Type Safety**: SQLModel provides type-safe database interactions
+- **CORS**: Configured for local development (`allow_origins=["*"]`)
+- **Error Handling**: Comprehensive error responses without exposing internal details
+
+#### 11.2.2 Data Protection
+- **Local Storage**: SQLite database stored in `locale/governance.db`
+- **File Permissions**: Standard file system permissions for local development
+- **Backup Strategy**: Manual backup of the database file
+- **Sensitive Data**: No sensitive user data stored in the current version
+
+#### 11.2.3 Access Control
+- **Local Development**: Designed for single-user local development
+- **No Authentication**: Current version does not implement user authentication
+- **Team Isolation**: Squad-based data organization for logical separation
+- **Future Planning**: Authentication and authorization planned for production deployment
+
+### 11.3 Compliance Considerations for Architecture Governance
+
+**Note**: The following compliance aspects are considered for architecture governance use cases:
+
+1. **Documentation Security**: Architecture artifacts contain sensitive design information
+2. **Audit Trail**: Artifact creation timestamps and status changes provide basic audit capability
+3. **Data Retention**: Artifacts are preserved as historical documentation
+4. **Access Control**: Local deployment model provides physical access control
+
+### 11.4 Planned Security Enhancements (Future)
+
+For production deployment, the following security features are planned:
+
+1. **Authentication**: JWT-based authentication with role-based access control
+2. **Authorization**: Fine-grained permissions for different user roles
+3. **Encryption**: TLS for API communications, encryption at rest for sensitive data
+4. **Audit Logging**: Comprehensive security event logging
+5. **Compliance**: Support for LGPD, GDPR, SOC 2 compliance requirements
+
+---
+
+## 12. Monitoring & Health Checks
+
+### 12.1 Health Monitoring Endpoints
+
+ADR Hub includes basic health monitoring suitable for local development:
+
+```python
+# src/main.py - Health check endpoint
+@app.get("/health")
+def health_check():
+    """Health check endpoint for monitoring."""
+    return {"status": "healthy"}
+
+# src/api/health.py - Comprehensive health endpoints
+@router.get("/health/readiness")
+def get_readiness():
+    """Readiness check for service dependencies."""
+    return {"status": "ready", "timestamp": datetime.utcnow().isoformat()}
+
+@router.get("/health/liveness")
+def get_liveness():
+    """Liveness check for service availability."""
+    return {"status": "live", "timestamp": datetime.utcnow().isoformat()}
+
+@router.get("/health/detailed")
+def get_detailed_health():
+    """Detailed health status with component checks."""
+    return health_service.get_overall_health()
+```
+
+### 12.2 Health Service Implementation
+
+The health service provides comprehensive monitoring for local development:
+
+```python
+# src/services/health_service.py - Database health check
+def check_database_health(self) -> Dict[str, Any]:
+    """Check database health by executing a simple query."""
+    start_time = time.time()
     
     try:
-        artifact = await self._create_artifact(artifact_data)
-        logger.info(
-            "artifact_created",
-            artifact_id=artifact.id,
-            artifact_number=artifact.artifact_number,
-            duration_ms=(time.time() - start_time) * 1000
-        )
-        return artifact
+        # Execute a simple query to check database connectivity
+        db_result = self.session.execute(select(1))
+        value = db_result.scalar()
+        
+        if value == 1:
+            status = HealthStatus.HEALTHY
+            error = None
+        else:
+            status = HealthStatus.UNHEALTHY
+            error = "Database query returned unexpected result"
+            
     except Exception as e:
-        logger.error(
-            "artifact_creation_failed",
-            error=str(e),
-            artifact_type=artifact_data.artifact_type,
-            duration_ms=(time.time() - start_time) * 1000
-        )
-        raise
+        status = HealthStatus.UNHEALTHY
+        error = str(e)
+    
+    response_time_ms = (time.time() - start_time) * 1000
+    
+    result: Dict[str, Any] = {
+        "name": "database",
+        "status": status,
+        "response_time_ms": round(response_time_ms, 2),
+    }
+    
+    if error:
+        result["error"] = error
+    
+    return result
 ```
 
-### 12.4 Alerting Strategy
-| Metric | Threshold | Alert Channel | Severity |
-|--------|-----------|---------------|----------|
-| API Error Rate | > 5% last 5min | PagerDuty, Slack | Critical |
-| Database Latency | > 500ms p95 | Slack, Email | Warning |
-| Health Check Failure | > 2 consecutive | PagerDuty | Critical |
-| Artifact Creation Rate | 0 last 1h | Slack | Warning |
-| Disk Space | < 20% free | Email, Slack | Warning |
+### 12.3 Component Health Checks
+
+The health service performs checks on all system components:
+
+1. **Database Health**: Connection test and query performance
+2. **Template Directory**: Verifies template files are accessible
+3. **Artifact Statistics**: Counts artifacts by type and status
+4. **System Metrics**: Database size, recent artifact counts
+
+### 12.4 Health Status Response Format
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "components": [
+    {
+      "name": "database",
+      "status": "healthy",
+      "response_time_ms": 12.34
+    },
+    {
+      "name": "templates",
+      "status": "healthy",
+      "directory_exists": true,
+      "directory_path": "/path/to/templates"
+    },
+    {
+      "name": "artifacts",
+      "status": "healthy",
+      "total_count": 42,
+      "by_type": {"adr": 10, "rfc": 5, "evidence": 27},
+      "by_status": {"proposed": 15, "accepted": 25, "rejected": 2}
+    }
+  ]
+}
+```
+
+### 12.5 Planned Monitoring Enhancements (Future)
+
+For production deployment, the following monitoring features are planned:
+
+1. **Prometheus Integration**: Metrics collection and visualization
+2. **Structured Logging**: JSON-formatted logs with correlation IDs
+3. **Alerting System**: Threshold-based alerts for critical metrics
+4. **Performance Monitoring**: API latency, database query performance
+5. **Business Metrics**: Artifact creation rates, approval workflows
 
 ---
 
-## 13. Operational Procedures
+## 13. Local Operations & Maintenance
 
-### 13.1 Deployment Procedures
-```bash
-# Blue-Green Deployment Procedure
-#!/bin/bash
-# deploy.sh
+### 13.1 Daily Development Operations
 
-# Step 1: Build new version
-docker build -t adr-hub:$NEW_VERSION .
+For local development with ADR Hub, follow these operational procedures:
 
-# Step 2: Deploy to green environment
-docker-compose -f docker-compose.green.yml up -d
+1. **Starting the Application**:
+   ```bash
+   # Activate virtual environment
+   venv\Scripts\activate  # Windows
+   source venv/bin/activate  # Unix/Mac
+   
+   # Start the FastAPI server
+   python src/main.py
+   
+   # Server runs at: http://localhost:8000
+   # API docs: http://localhost:8000/docs
+   ```
 
-# Step 3: Health check
-curl -f http://green.example.com/api/health/readiness || exit 1
+2. **Database Operations**:
+   ```bash
+   # Database is automatically created on first run
+   # Manual initialization (if needed):
+   python -c "from src.database import create_db_and_tables; create_db_and_tables()"
+   
+   # Database file location: ./locale/governance.db
+   ```
 
-# Step 4: Switch traffic
-aws elbv2 modify-listener --listener-arn $LISTENER_ARN \
-  --default-actions Type=forward,TargetGroupArn=$GREEN_TG_ARN
+3. **Testing Operations**:
+   ```bash
+   # Run all tests
+   python -m pytest tests/ -v
+   
+   # Run tests with coverage
+   python -m pytest tests/ -v --cov=src --cov-report=html
+   
+   # Minimum coverage requirement: 74%
+   ```
 
-# Step 5: Monitor for 5 minutes
-sleep 300
+### 13.2 Backup & Data Management
 
-# Step 6: Decommission blue
-docker-compose -f docker-compose.blue.yml down
-```
+Since ADR Hub runs locally, data management follows standard local development practices:
 
-### 13.2 Backup & Recovery
-```bash
-# Backup Script
-#!/bin/bash
-# backup.sh
+1. **Database Backup**:
+   ```bash
+   # Manual backup of SQLite database
+   cp ./locale/governance.db ./locale/governance.db.backup-$(date +%Y%m%d)
+   
+   # Restore from backup
+   cp ./locale/governance.db.backup-20240115 ./locale/governance.db
+   ```
 
-# Database backup
-pg_dump -h $DB_HOST -U $DB_USER $DB_NAME > /backups/db-$(date +%Y%m%d).sql
+2. **Artifact Files Backup**:
+   ```bash
+   # Artifact markdown files are stored in ./architecture/
+   # Back up the entire architecture directory
+   tar -czf architecture-backup-$(date +%Y%m%d).tar.gz architecture/
+   ```
 
-# File system backup
-tar -czf /backups/files-$(date +%Y%m%d).tar.gz architecture/ templates/
+3. **Version Control Integration**:
+   - All artifacts are version-controlled via Git
+   - Database should NOT be committed to Git (in .gitignore)
+   - Regular commits for artifact changes
 
-# Upload to S3
-aws s3 cp /backups/db-$(date +%Y%m%d).sql s3://$BACKUP_BUCKET/
-aws s3 cp /backups/files-$(date +%Y%m%d).tar.gz s3://$BACKUP_BUCKET/
+### 13.3 Troubleshooting Common Issues
 
-# Retention policy (keep 30 days)
-find /backups -type f -mtime +30 -delete
-```
+| Issue | Symptoms | Resolution |
+|-------|----------|------------|
+| Database connection error | "sqlite3.OperationalError: unable to open database file" | Check file permissions on `./locale/governance.db` |
+| Port already in use | "Address already in use" | Change port in `src/main.py` or kill existing process |
+| Missing dependencies | "ModuleNotFoundError" | Run `pip install -r requirements.txt` |
+| Template file not found | "FileNotFoundError" | Ensure `templates/` directory exists with template files |
 
-### 13.3 Incident Response
-1. **Detection**: Monitoring alerts, user reports
-2. **Triage**: Severity assessment, impact analysis
-3. **Containment**: Isolate affected components
-4. **Investigation**: Root cause analysis
-5. **Resolution**: Implement fix, verify recovery
-6. **Post-mortem**: Document lessons learned
+### 13.4 Maintenance Procedures
 
-### 13.4 Capacity Planning
-- **Database**: 1GB per 10,000 artifacts
-- **File Storage**: 100MB per 1,000 markdown files
-- **Memory**: 512MB per API instance + 256MB overhead
-- **CPU**: 2 vCPUs for up to 100 concurrent users
+1. **Dependency Updates**:
+   ```bash
+   # Update Python dependencies
+   pip install --upgrade -r requirements.txt
+   
+   # Check for security vulnerabilities
+   safety check
+   ```
+
+2. **Code Quality Maintenance**:
+   ```bash
+   # Format code with black
+   black src/ tests/
+   
+   # Check imports with isort
+   isort src/ tests/ --profile=black
+   
+   # Lint with flake8
+   flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+   ```
+
+3. **Database Maintenance**:
+   - SQLite requires minimal maintenance
+   - Periodically run `VACUUM` if database grows large
+   - Monitor disk space for `./locale/governance.db`
+
+### 13.5 Planned Operational Enhancements (Future)
+
+For production deployment, the following operational procedures are planned:
+
+1. **Automated Deployments**: CI/CD pipeline with automated testing
+2. **Database Migrations**: Versioned schema migrations
+3. **Monitoring & Alerting**: Production-grade monitoring
+4. **Backup Automation**: Scheduled backups with retention policies
 
 ---
 
 ## 14. Extension & Customization
 
-### 14.1 Plugin Architecture
-```python
-# Plugin Interface
-from abc import ABC, abstractmethod
-from typing import Dict, Any
+### 14.1 Current Extension Points
 
+The current ADR Hub implementation provides several built-in extension mechanisms:
+
+1. **7 Predefined Artifact Types**: The system supports 7 fixed artifact types:
+   - `adr`: Architecture Decision Records
+   - `rfc`: Requests for Comments
+   - `evidence`: Technical evidence and proofs
+   - `governance`: Governance and compliance documents
+   - `implementation`: Implementation plans and technical specifications
+   - `visibility`: Visibility and communication artifacts
+   - `uncommon`: Specialized artifacts for unique scenarios
+
+2. **Trigger Engine**: Custom business logic can be implemented using the trigger system:
+   - Rule-based automation using Python expressions
+   - Automatic artifact creation based on conditions
+   - Status transition validation rules
+
+3. **Template System**: Custom Markdown templates can be added to the `/templates` directory.
+
+### 14.2 Planned Extension Features (Future Roadmap)
+
+The following extension capabilities are planned for future releases:
+
+#### Plugin Architecture (Planned)
+```python
+# Planned plugin interface concept
 class ADRPlugin(ABC):
     """Base class for ADR Hub plugins."""
     
-    @abstractmethod
     def on_artifact_created(self, artifact: Artifact) -> None:
         """Called when an artifact is created."""
         pass
     
-    @abstractmethod
     def on_status_changed(self, artifact: Artifact, old_status: str) -> None:
         """Called when artifact status changes."""
         pass
-
-# Plugin Registry
-class PluginRegistry:
-    def __init__(self):
-        self._plugins: List[ADRPlugin] = []
-    
-    def register(self, plugin: ADRPlugin):
-        self._plugins.append(plugin)
-    
-    def notify_artifact_created(self, artifact: Artifact):
-        for plugin in self._plugins:
-            plugin.on_artifact_created(artifact)
 ```
 
-### 14.2 Custom Artifact Types
-```python
-# Custom Artifact Type Definition
-from pydantic import BaseModel
-from enum import Enum
+#### Custom Artifact Types (Planned)
+Future versions may allow defining custom artifact types with specialized fields and validation rules.
 
-class CustomArtifactType(str, Enum):
-    SECURITY_REVIEW = "security_review"
-    CAPACITY_PLAN = "capacity_plan"
-    DISASTER_RECOVERY = "disaster_recovery"
-
-class CustomArtifactCreate(BaseModel):
-    artifact_type: CustomArtifactType
-    title: str
-    content: str
-    # Custom fields
-    risk_level: str
-    mitigation_plan: str
-    review_cycle_days: int
-    
-    class Config:
-        use_enum_values = True
-```
-
-### 14.3 Integration Extensions
-- **Custom Export Formats**: PDF, Word, Excel
-- **External System Sync**: Jira, ServiceNow, Salesforce
-- **Notification Channels**: Slack, Teams, Email, SMS
-- **Analytics Integration**: Power BI, Tableau, Looker
+#### Integration Extensions (Planned)
+- **Export Formats**: PDF, Word, Excel export functionality
+- **External System Sync**: Integration with Jira, ServiceNow, Salesforce
+- **Notification Channels**: Slack, Microsoft Teams, Email notifications
+- **Analytics Integration**: Power BI, Tableau, Looker dashboards
 
 ---
 
 ## 15. Roadmap & Evolution
 
-### 15.1 Short-term (Next 3 months)
-- [ ] JWT authentication with role-based access
-- [ ] Webhook notifications for status changes
-- [ ] PDF export functionality
-- [ ] Alembic migrations for database schema management
+### 15.1 Current Implementation
+The ADR Hub currently provides:
+- **7 Artifact Types**: Fixed set of architecture governance artifacts
+- **Clean Architecture**: API, Service, and Models layers
+- **SQLite Database**: Local development database with SQLModel ORM
+- **Trigger Engine**: Safe AST-based rule evaluation system
+- **Health Monitoring**: Database and template directory health checks
+- **REST API**: Full CRUD operations for artifacts, squads, and triggers
+- **Local Development**: Complete local setup with virtual environment
 
-### 15.2 Medium-term (3-6 months)
-- [ ] Modern FastAPI patterns (`lifespan` instead of `on_event`)
-- [ ] Pydantic v2 full migration
-- [ ] Rate limiting and API throttling
-- [ ] Advanced search with Elasticsearch integration
-- [ ] Real-time collaboration features
+### 15.2 Short-term (Next 3 months)
+- [ ] **Authentication**: JWT with role-based access (Architect/TechLead/Viewer roles)
+- [ ] **Export Functionality**: PDF export for artifacts
+- [ ] **Database Migrations**: Alembic migrations for PostgreSQL compatibility
+- [ ] **Webhook Notifications**: Status change notifications to external systems
 
-### 15.3 Long-term (6+ months)
-- [ ] GraphQL API alongside REST
-- [ ] Machine learning for artifact suggestions
-- [ ] Integration with project management tools
-- [ ] Mobile application
-- [ ] Advanced analytics and reporting
+### 15.3 Medium-term (3-6 months)
+- [ ] **Modern FastAPI Patterns**: Transition from `on_event` to `lifespan` context managers
+- [ ] **Enhanced Validation**: Full migration to Pydantic v2 patterns and settings
+- [ ] **API Protection**: Rate limiting and API throttling controls
+- [ ] **Search Enhancements**: Advanced search with filtering capabilities
+- [ ] **Collaboration Features**: Basic real-time collaboration support
+
+### 15.4 Long-term (6+ months)
+- [ ] **GraphQL API**: GraphQL endpoint alongside REST API
+- [ ] **ML Suggestions**: Machine learning for artifact suggestions and patterns
+- [ ] **Tool Integration**: Integration with Jira, Linear, and other project management tools
+- [ ] **Mobile Access**: Mobile-optimized interface or application
+- [ ] **Advanced Analytics**: Business intelligence and reporting dashboards
 
 ---
 
@@ -982,10 +1073,10 @@ class CustomArtifactCreate(BaseModel):
 
 ### 16.2 Tools & Libraries
 - **FastAPI**: Modern web framework for APIs
-- **SQLModel**: SQL databases in Python, designed for simplicity
+- **SQLModel**: SQL databases in Python, designed for simplicity (includes automatic table creation)
 - **Pydantic**: Data validation using Python type annotations
-- **Alembic**: Database migration tool
-- **Pytest**: Testing framework
+- **SQLAlchemy**: Underlying ORM for database operations
+- **Pytest**: Testing framework with coverage reporting
 
 ### 16.3 Standards & Frameworks
 - **TOGAF**: The Open Group Architecture Framework
