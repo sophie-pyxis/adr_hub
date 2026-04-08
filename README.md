@@ -283,14 +283,14 @@ pytest tests/ --cov=src --cov-fail-under=75
 ```
 
 ### Test Coverage
-- **Overall Coverage**: 77%
+- **Overall Coverage**: 74%
 - **Key Service Coverage**:
-  - `artifact_service.py`: 90%
-  - `squad_service.py`: 94%
-  - `template_service.py`: 97%
-  - `trigger_service.py`: 82%
-  - `health_service.py`: 85%
-  - API endpoints: 100%
+  - `artifact_service.py`: 7%
+  - `squad_service.py`: 36%
+  - `template_service.py`: 16%
+  - `trigger_service.py`: 17%
+  - `health_service.py`: 25%
+  - API endpoints: 46-53%
 
 ---
 
