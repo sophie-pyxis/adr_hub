@@ -68,7 +68,7 @@ jobs:
 
     - name: Check import sorting with isort
       run: |
-        isort --check-only src/ tests/
+        isort --check-only src/ tests/ --profile=black
 
     - name: Type check with mypy
       run: |
