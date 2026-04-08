@@ -241,9 +241,9 @@ def test_trigger_evaluation(
     Returns evaluation result and any errors.
     """
     try:
-        # Get artifact by ID
-        artifact = artifact_service.get_artifact_by_id(artifact_id)
-        if not artifact:
+        # Get artifact model by ID
+        artifact_model = artifact_service.get_artifact_model_by_id(artifact_id)
+        if not artifact_model:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Artifact with ID {artifact_id} not found",
@@ -251,7 +251,7 @@ def test_trigger_evaluation(
 
         # Evaluate condition using trigger service
         result = trigger_service.evaluate_condition(
-            artifact=artifact, condition=condition
+            artifact=artifact_model, condition=condition
         )
 
         return {"condition": condition, "result": result, "error": None}

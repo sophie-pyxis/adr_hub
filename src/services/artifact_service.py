@@ -15,7 +15,6 @@ from typing import Any, Dict, List, Optional
 
 from sqlmodel import Session, or_, select
 
-from ..database import get_session
 from ..models.artifact import (
     Artifact,
     ArtifactCreate,
@@ -455,7 +454,9 @@ class ArtifactService:
             artifact.squad_id for artifact in artifacts if artifact.squad_id is not None
         }
         if squad_ids:
-            squads = session.exec(select(Squad).where(Squad.id.in_(squad_ids))).all()
+            squads = session.exec(
+                select(Squad).where(Squad.id.in_(list(squad_ids)))  # type: ignore[union-attr]
+            ).all()
             squad_map = {squad.id: squad.name for squad in squads}
         else:
             squad_map = {}
@@ -517,7 +518,11 @@ class ArtifactService:
                 raise ValueError("rfc_status is required for ADR level >= 3")
 
         # Also validate if level >= 4 and tco_estimate/lgpd_analysis fields are being updated
-        if artifact.artifact_type == "adr" and artifact.level >= 4:
+        if (
+            artifact.artifact_type == "adr"
+            and artifact.level is not None
+            and artifact.level >= 4
+        ):
             if "tco_estimate" in update_data and not update_data["tco_estimate"]:
                 raise ValueError("tco_estimate cannot be empty for ADR level >= 4")
             if "lgpd_analysis" in update_data and not update_data["lgpd_analysis"]:
@@ -543,6 +548,84 @@ class ArtifactService:
 
         return artifact_read
 
+    def update_artifact_by_id(
+        self, artifact_id: int, artifact_update: ArtifactUpdate
+    ) -> Optional[ArtifactRead]:
+        """
+        Update an artifact by ID.
+
+        Args:
+            artifact_id: Artifact ID to update
+            artifact_update: Update data
+
+        Returns:
+            Updated artifact if found, None otherwise
+        """
+        session = self._get_session()
+
+        artifact = session.get(Artifact, artifact_id)
+
+        if not artifact:
+            return None
+
+        # Update fields
+        update_data = artifact_update.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(artifact, field, value)
+
+        # Update timestamp
+        artifact.updated_at = datetime.utcnow()
+
+        # Validate level-specific requirements for ADR if level is being updated
+        if "level" in update_data and artifact.artifact_type == "adr":
+            new_level = update_data["level"]
+
+            if new_level >= 4:
+                if not artifact.tco_estimate:
+                    raise ValueError("tco_estimate is required for ADR level >= 4")
+                if not artifact.lgpd_analysis:
+                    raise ValueError("lgpd_analysis is required for ADR level >= 4")
+                if not artifact.health_compliance_impact:
+                    raise ValueError(
+                        "health_compliance_impact is required for ADR level >= 4"
+                    )
+
+            if new_level >= 3 and not artifact.rfc_status:
+                raise ValueError("rfc_status is required for ADR level >= 3")
+
+        # Also validate if level >= 4 and tco_estimate/lgpd_analysis fields are being updated
+        if (
+            artifact.artifact_type == "adr"
+            and artifact.level is not None
+            and artifact.level >= 4
+        ):
+            if "tco_estimate" in update_data and not update_data["tco_estimate"]:
+                raise ValueError("tco_estimate is required for ADR level >= 4")
+            if "lgpd_analysis" in update_data and not update_data["lgpd_analysis"]:
+                raise ValueError("lgpd_analysis is required for ADR level >= 4")
+            if (
+                "health_compliance_impact" in update_data
+                and not update_data["health_compliance_impact"]
+            ):
+                raise ValueError(
+                    "health_compliance_impact is required for ADR level >= 4"
+                )
+
+        session.add(artifact)
+        session.commit()
+        session.refresh(artifact)
+
+        # Convert to read model
+        artifact_read = ArtifactRead.model_validate(artifact)
+
+        # Get squad name
+        if artifact.squad_id:
+            squad = session.get(Squad, artifact.squad_id)
+            if squad:
+                artifact_read.squad_name = squad.name
+
+        return artifact_read
+
     def update_artifact_status(
         self, artifact_number: str, status_update: ArtifactStatusUpdate
     ) -> Optional[ArtifactRead]:
@@ -561,6 +644,72 @@ class ArtifactService:
         artifact = session.exec(
             select(Artifact).where(Artifact.artifact_number == artifact_number)
         ).first()
+
+        if not artifact:
+            return None
+
+        # Validate status transition
+        current_status = artifact.status
+        new_status = status_update.status
+
+        if new_status not in self.STATUS_TRANSITIONS.get(current_status, []):
+            raise ValueError(
+                f"Cannot transition from '{current_status}' to '{new_status}'"
+            )
+
+        # Update status
+        artifact.status = new_status
+        artifact.updated_at = datetime.utcnow()
+
+        # Handle special cases
+        if new_status == "superseded":
+            # Validate superseded_by artifact exists
+            superseded_artifact = session.exec(
+                select(Artifact).where(
+                    Artifact.artifact_number == status_update.superseded_by
+                )
+            ).first()
+            if not superseded_artifact:
+                raise ValueError(
+                    f"Artifact '{status_update.superseded_by}' not found for superseded_by"
+                )
+            # Could store this relationship in a separate field if needed
+
+        elif new_status == "rejected":
+            # Store rejection reason if provided
+            if status_update.rejection_reason:
+                # Store in a note or separate field (not in current model)
+                pass
+
+        session.add(artifact)
+        session.commit()
+        session.refresh(artifact)
+
+        # Get squad name
+        squad = session.get(Squad, artifact.squad_id)
+        squad_name = squad.name if squad else "Unknown"
+
+        artifact_read = ArtifactRead.model_validate(artifact)
+        artifact_read.squad_name = squad_name
+
+        return artifact_read
+
+    def update_artifact_status_by_id(
+        self, artifact_id: int, status_update: ArtifactStatusUpdate
+    ) -> Optional[ArtifactRead]:
+        """
+        Update artifact status by ID with validation.
+
+        Args:
+            artifact_id: Artifact ID
+            status_update: Status update data
+
+        Returns:
+            Updated artifact if found, None otherwise
+        """
+        session = self._get_session()
+
+        artifact = session.get(Artifact, artifact_id)
 
         if not artifact:
             return None
@@ -653,7 +802,9 @@ class ArtifactService:
             artifact.squad_id for artifact in artifacts if artifact.squad_id is not None
         }
         if squad_ids:
-            squads = session.exec(select(Squad).where(Squad.id.in_(squad_ids))).all()
+            squads = session.exec(
+                select(Squad).where(Squad.id.in_(list(squad_ids)))  # type: ignore[union-attr]
+            ).all()
             squad_map = {squad.id: squad.name for squad in squads}
         else:
             squad_map = {}
@@ -721,6 +872,19 @@ class ArtifactService:
 
         return artifact_read
 
+    def get_artifact_model_by_id(self, artifact_id: int) -> Optional[Artifact]:
+        """
+        Get full Artifact model by ID (for internal use).
+
+        Args:
+            artifact_id: Artifact ID
+
+        Returns:
+            Full Artifact model if found, None otherwise
+        """
+        session = self._get_session()
+        return session.get(Artifact, artifact_id)
+
     def delete_artifact(self, artifact_number: str) -> bool:
         """
         Delete an artifact.
@@ -736,6 +900,28 @@ class ArtifactService:
         artifact = session.exec(
             select(Artifact).where(Artifact.artifact_number == artifact_number)
         ).first()
+
+        if not artifact:
+            return False
+
+        session.delete(artifact)
+        session.commit()
+
+        return True
+
+    def delete_artifact_by_id(self, artifact_id: int) -> bool:
+        """
+        Delete an artifact by ID.
+
+        Args:
+            artifact_id: Artifact ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        session = self._get_session()
+
+        artifact = session.get(Artifact, artifact_id)
 
         if not artifact:
             return False
@@ -804,3 +990,27 @@ class ArtifactService:
         except Exception as e:
             # Return empty counts on error
             return {"total": 0, "by_type": {}, "by_status": {}, "error": str(e)}
+
+    def get_artifact_file_content(self, artifact_id: int) -> Optional[str]:
+        """
+        Get artifact file content by ID.
+
+        Args:
+            artifact_id: Artifact ID
+
+        Returns:
+            File content as string, or None if not found
+        """
+        session = self._get_session()
+
+        artifact = session.get(Artifact, artifact_id)
+
+        if not artifact or not artifact.file_path:
+            return None
+
+        try:
+            # Read file content
+            with open(artifact.file_path, "r", encoding="utf-8") as f:
+                return f.read()
+        except (FileNotFoundError, IOError):
+            return None

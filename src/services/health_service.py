@@ -53,8 +53,8 @@ class HealthService:
 
         try:
             # Execute a simple query to check database connectivity
-            result = self.session.execute(select(1))
-            value = result.scalar()
+            db_result = self.session.execute(select(1))
+            value = db_result.scalar()
 
             if value == 1:
                 status = HealthStatus.HEALTHY
@@ -69,7 +69,7 @@ class HealthService:
 
         response_time_ms = (time.time() - start_time) * 1000
 
-        result = {
+        result: Dict[str, Any] = {
             "name": "database",
             "status": status,
             "response_time_ms": round(response_time_ms, 2),
@@ -153,10 +153,14 @@ class HealthService:
         # Database metrics
         try:
             # Get database size estimate (SQLite specific)
-            result = self.session.execute(
-                "SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()"
+            from sqlmodel import text
+
+            db_result = self.session.execute(
+                text(
+                    "SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()"
+                )
             )
-            db_size_bytes = result.scalar() or 0
+            db_size_bytes = db_result.scalar() or 0
 
             metrics["database"] = {
                 "size_bytes": db_size_bytes,

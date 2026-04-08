@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlmodel import Session, select
 
-from ..models.artifact import Artifact, ArtifactCreate
+from ..models.artifact import Artifact, ArtifactCreate, ArtifactRead
 from ..models.trigger_rule import TriggerRule
 from ..services.artifact_service import ArtifactService
 
@@ -74,7 +74,7 @@ class TriggerService:
         """
         statement = select(TriggerRule).where(TriggerRule.source_type == source_type)
         result = self.session.exec(statement)
-        return result.all()
+        return list(result.all())
 
     def evaluate_condition(self, artifact: Artifact, condition: str) -> bool:
         """
@@ -311,7 +311,7 @@ class TriggerService:
 
     def create_target_artifact(
         self, source_artifact: Artifact, trigger_rule: TriggerRule
-    ) -> Optional[Artifact]:
+    ) -> Optional[ArtifactRead]:
         """
         Create target artifact based on trigger rule.
 
@@ -341,7 +341,7 @@ class TriggerService:
         # This will handle template validation, content generation, etc.
         return self.artifact_service.create_artifact(target_data)
 
-    def process_artifact_triggers(self, artifact: Artifact) -> List[Artifact]:
+    def process_artifact_triggers(self, artifact: Artifact) -> List[ArtifactRead]:
         """
         Process all triggers for an artifact and auto-create targets.
 

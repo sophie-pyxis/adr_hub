@@ -95,13 +95,16 @@ def create_artifact(
     """
     try:
         # Create the artifact
-        artifact = artifact_service.create_artifact(artifact_data)
+        artifact_read = artifact_service.create_artifact(artifact_data)
 
-        # Check and process any triggers for this artifact
-        # This will auto-create any target artifacts based on trigger rules
-        trigger_service.process_artifact_triggers(artifact)
+        # Get the full artifact model for trigger processing
+        artifact_model = artifact_service.get_artifact_model_by_id(artifact_read.id)
+        if artifact_model:
+            # Check and process any triggers for this artifact
+            # This will auto-create any target artifacts based on trigger rules
+            trigger_service.process_artifact_triggers(artifact_model)
 
-        return artifact
+        return artifact_read
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -176,7 +179,7 @@ def get_artifact_by_id(
 
     - **artifact_id**: ID of the artifact to retrieve
     """
-    artifact = artifact_service.get_artifact(artifact_id)
+    artifact = artifact_service.get_artifact_by_id(artifact_id)
     if not artifact:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -202,7 +205,7 @@ def update_artifact(
     - **rfc_status**: New RFC status (optional)
     """
     try:
-        artifact = artifact_service.update_artifact(artifact_id, artifact_update)
+        artifact = artifact_service.update_artifact_by_id(artifact_id, artifact_update)
         if not artifact:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -222,7 +225,7 @@ def delete_artifact(
 
     - **artifact_id**: ID of the artifact to delete
     """
-    success = artifact_service.delete_artifact(artifact_id)
+    success = artifact_service.delete_artifact_by_id(artifact_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -247,31 +250,34 @@ def update_artifact_status(
     - **rejection_reason**: Reason for rejection (required for status=rejected)
     """
     try:
-        # First get the current artifact to check triggers
-        artifact = artifact_service.get_artifact(artifact_id)
-        if not artifact:
+        # First get the current artifact model to check triggers
+        artifact_model = artifact_service.get_artifact_model_by_id(artifact_id)
+        if not artifact_model:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Artifact with ID '{artifact_id}' not found",
             )
 
         # Validate required triggers before status update
-        trigger_service.validate_required_triggers(artifact)
+        trigger_service.validate_required_triggers(artifact_model)
 
         # Update the status
-        updated_artifact = artifact_service.update_artifact_status(
+        updated_artifact_read = artifact_service.update_artifact_status_by_id(
             artifact_id, status_update
         )
-        if not updated_artifact:
+        if not updated_artifact_read:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Artifact with ID '{artifact_id}' not found",
             )
 
-        # Check and process any triggers that might now be satisfied
-        trigger_service.process_artifact_triggers(updated_artifact)
+        # Get the updated artifact model for trigger processing
+        updated_artifact_model = artifact_service.get_artifact_model_by_id(artifact_id)
+        if updated_artifact_model:
+            # Check and process any triggers that might now be satisfied
+            trigger_service.process_artifact_triggers(updated_artifact_model)
 
-        return updated_artifact
+        return updated_artifact_read
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

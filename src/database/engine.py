@@ -2,9 +2,7 @@
 Database engine configuration with support for in-memory testing.
 """
 
-import os
 from pathlib import Path
-from typing import Optional
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
@@ -82,10 +80,6 @@ def create_db_and_tables(testing: bool = False):
     Args:
         testing: If True, create in-memory database
     """
-    from ..models.artifact import Artifact
-    from ..models.artifact_reference import ArtifactReference
-    from ..models.squad import Squad
-    from ..models.trigger_rule import TriggerRule
 
     engine = get_engine(testing)
     SQLModel.metadata.create_all(engine)

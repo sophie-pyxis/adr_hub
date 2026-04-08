@@ -125,7 +125,7 @@ def test_get_artifact_by_id(client, session):
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
         )
-        mock_service.get_artifact.return_value = mock_artifact
+        mock_service.get_artifact_by_id.return_value = mock_artifact
         MockArtifactService.return_value = mock_service
 
         response = client.get("/api/artifacts/1")
@@ -141,7 +141,7 @@ def test_get_artifact_not_found(client):
     """Test getting non-existent artifact."""
     with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
-        mock_service.get_artifact.return_value = None
+        mock_service.get_artifact_by_id.return_value = None
         MockArtifactService.return_value = mock_service
 
         response = client.get("/api/artifacts/999")
@@ -167,7 +167,7 @@ def test_update_artifact(client):
             updated_at=datetime.utcnow(),
             rfc_status="RFC-2024-001 completed",
         )
-        mock_service.update_artifact.return_value = updated_artifact
+        mock_service.update_artifact_by_id.return_value = updated_artifact
         MockArtifactService.return_value = mock_service
 
         update_data = {
@@ -188,7 +188,7 @@ def test_update_artifact_not_found(client):
     """Test updating non-existent artifact."""
     with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
-        mock_service.update_artifact.return_value = None
+        mock_service.update_artifact_by_id.return_value = None
         MockArtifactService.return_value = mock_service
 
         update_data = {"title": "Updated Title"}
@@ -201,7 +201,7 @@ def test_delete_artifact(client):
     """Test deleting an artifact."""
     with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
-        mock_service.delete_artifact.return_value = True
+        mock_service.delete_artifact_by_id.return_value = True
         MockArtifactService.return_value = mock_service
 
         response = client.delete("/api/artifacts/1")
@@ -213,7 +213,7 @@ def test_delete_artifact_not_found(client):
     """Test deleting non-existent artifact."""
     with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
-        mock_service.delete_artifact.return_value = False
+        mock_service.delete_artifact_by_id.return_value = False
         MockArtifactService.return_value = mock_service
 
         response = client.delete("/api/artifacts/999")
@@ -245,8 +245,11 @@ def test_update_artifact_status(client):
         )
 
         # Mock the artifact service methods
-        mock_artifact_service.get_artifact.return_value = updated_artifact
-        mock_artifact_service.update_artifact_status.return_value = updated_artifact
+        mock_artifact_service.get_artifact_by_id.return_value = updated_artifact
+        mock_artifact_service.get_artifact_model_by_id.return_value = updated_artifact
+        mock_artifact_service.update_artifact_status_by_id.return_value = (
+            updated_artifact
+        )
 
         # Mock the trigger service to do nothing (no validation needed for this test)
         mock_trigger_service.validate_required_triggers.return_value = None
@@ -288,8 +291,11 @@ def test_update_artifact_status_superseded(client):
         )
 
         # Mock the artifact service methods
-        mock_artifact_service.get_artifact.return_value = updated_artifact
-        mock_artifact_service.update_artifact_status.return_value = updated_artifact
+        mock_artifact_service.get_artifact_by_id.return_value = updated_artifact
+        mock_artifact_service.get_artifact_model_by_id.return_value = updated_artifact
+        mock_artifact_service.update_artifact_status_by_id.return_value = (
+            updated_artifact
+        )
 
         # Mock the trigger service to do nothing (no validation needed for this test)
         mock_trigger_service.validate_required_triggers.return_value = None
