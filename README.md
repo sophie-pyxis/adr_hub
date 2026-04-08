@@ -258,22 +258,22 @@ description: string
 
 ```mermaid
 flowchart TD
-    Start[Create Artifact] --> Type{Artifact Type?}
+    Start["Create Artifact"] --> Type{"Artifact Type?"}
     
-    Type -->|ADR| ADR[Generate ADR Number]
-    ADR --> Level[Get level-specific sequence]
-    ADR --> Format[Format: ADR-{level}-{seq}]
+    Type -->|ADR| ADR["Generate ADR Number"]
+    ADR --> Level["Get level-specific sequence"]
+    ADR --> Format["Format: ADR-{level}-{seq}"]
     
-    Type -->|RFC| RFC[Generate RFC Number]
-    RFC --> Year[Use current year]
-    RFC --> RSeq[Get year-specific sequence]
-    RFC --> RFormat[Format: RFC-{year}-{seq}]
+    Type -->|RFC| RFC["Generate RFC Number"]
+    RFC --> Year["Use current year"]
+    RFC --> RSeq["Get year-specific sequence"]
+    RFC --> RFormat["Format: RFC-{year}-{seq}"]
     
-    Type -->|Other| Other[Generate Generic Number]
-    Other --> OSeq[Get type-specific sequence]
-    Other --> OFormat[Format: {PREFIX}-{seq}]
+    Type -->|Other| Other["Generate Generic Number"]
+    Other --> OSeq["Get type-specific sequence"]
+    Other --> OFormat["Format: {PREFIX}-{seq}"]
     
-    Format --> Done[Return Number]
+    Format --> Done["Return Number"]
     RFormat --> Done
     OFormat --> Done
 ```
@@ -286,22 +286,22 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    L1["Level 1<br/>Operational<br/>Sophie decides"]
-    L2["Level 2<br/>Component<br/>Sophie decides"]
-    L3["Level 3<br/>Platform<br/>Thiago approves"]
-    L4["Level 4<br/>Strategic<br/>Thiago + Silvana"]
-    L5["Level 5<br/>Principle<br/>Org-wide"]
+    L1["Level 1<br/>Operational<br/>Tech Lead approves"]
+    L2["Level 2<br/>Component<br/>Tech Lead approves"]
+    L3["Level 3<br/>Platform<br/>Architect approves"]
+    L4["Level 4<br/>Strategic<br/>Architect + Business Manager"]
+    L5["Level 5<br/>Principle<br/>Organization-wide"]
     
     L1 --> L2 --> L3 --> L4 --> L5
 ```
 
 ### Validation Requirements
 
-| Level | Approver | Required Fields |
-|-------|----------|-----------------|
-| 1–2 | Sophie | — |
-| 3 | Thiago | `rfc_status` |
-| 4–5 | Thiago + Silvana | `rfc_status`, `tco_estimate`, `lgpd_analysis` |
+| Level | Approver Role | Required Fields |
+|-------|--------------|-----------------|
+| 1–2 | Tech Lead | — |
+| 3 | Architect | `rfc_status` |
+| 4–5 | Architect + Business Manager | `rfc_status`, `tco_estimate`, `lgpd_analysis` |
 
 ### Compliance Fields
 - **TCO Estimate**: Total Cost of Ownership (levels 4-5)
