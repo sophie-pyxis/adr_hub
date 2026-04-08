@@ -99,7 +99,7 @@ def test_check_artifact_counts():
     mock_artifact_service.get_artifact_counts.return_value = {
         "total": 10,
         "by_type": {"adr": 5, "rfc": 3, "evidence": 2},
-        "by_status": {"proposed": 3, "accepted": 7}
+        "by_status": {"proposed": 3, "accepted": 7},
     }
 
     service = HealthService(mock_session, mock_artifact_service)
@@ -121,7 +121,7 @@ def test_check_artifact_counts_empty():
     mock_artifact_service.get_artifact_counts.return_value = {
         "total": 0,
         "by_type": {},
-        "by_status": {}
+        "by_status": {},
     }
 
     service = HealthService(mock_session, mock_artifact_service)
@@ -158,9 +158,21 @@ def test_get_overall_health():
     service = HealthService(mock_session, mock_artifact_service)
 
     # Mock individual health checks
-    with patch.object(service, "check_database_health", return_value={"status": "healthy", "response_time_ms": 10}):
-        with patch.object(service, "check_template_directory", return_value={"status": "healthy", "directory_exists": True}):
-            with patch.object(service, "check_artifact_counts", return_value={"status": "healthy", "total_count": 5}):
+    with patch.object(
+        service,
+        "check_database_health",
+        return_value={"status": "healthy", "response_time_ms": 10},
+    ):
+        with patch.object(
+            service,
+            "check_template_directory",
+            return_value={"status": "healthy", "directory_exists": True},
+        ):
+            with patch.object(
+                service,
+                "check_artifact_counts",
+                return_value={"status": "healthy", "total_count": 5},
+            ):
 
                 result = service.get_overall_health()
 
@@ -178,9 +190,25 @@ def test_get_overall_health_with_failure():
     service = HealthService(mock_session, mock_artifact_service)
 
     # Mock mixed health checks
-    with patch.object(service, "check_database_health", return_value={"status": "healthy", "response_time_ms": 10}):
-        with patch.object(service, "check_template_directory", return_value={"status": "unhealthy", "directory_exists": False, "warning": "Directory missing"}):
-            with patch.object(service, "check_artifact_counts", return_value={"status": "healthy", "total_count": 5}):
+    with patch.object(
+        service,
+        "check_database_health",
+        return_value={"status": "healthy", "response_time_ms": 10},
+    ):
+        with patch.object(
+            service,
+            "check_template_directory",
+            return_value={
+                "status": "unhealthy",
+                "directory_exists": False,
+                "warning": "Directory missing",
+            },
+        ):
+            with patch.object(
+                service,
+                "check_artifact_counts",
+                return_value={"status": "healthy", "total_count": 5},
+            ):
 
                 result = service.get_overall_health()
 
@@ -202,8 +230,8 @@ def test_health_endpoint(client):
             "components": [
                 {"name": "database", "status": "healthy"},
                 {"name": "templates", "status": "healthy"},
-                {"name": "artifacts", "status": "healthy"}
-            ]
+                {"name": "artifacts", "status": "healthy"},
+            ],
         }
 
         response = client.get("/api/health")
@@ -228,12 +256,13 @@ def test_health_endpoint_unhealthy(client):
         "components": [
             {"name": "database", "status": "healthy"},
             {"name": "templates", "status": "unhealthy", "error": "Directory missing"},
-            {"name": "artifacts", "status": "healthy"}
-        ]
+            {"name": "artifacts", "status": "healthy"},
+        ],
     }
 
     # Override the dependency
     from src.main import app
+
     app.dependency_overrides[get_health_service] = lambda: mock_service
 
     try:
@@ -258,6 +287,7 @@ def test_health_endpoint_internal_error(client):
 
     # Override the dependency
     from src.main import app
+
     app.dependency_overrides[get_health_service] = lambda: mock_service
 
     try:
@@ -299,7 +329,7 @@ def test_health_metrics_endpoint(client):
         mock_service.get_detailed_metrics.return_value = {
             "database": {"queries_per_minute": 100, "connection_pool": 10},
             "artifacts": {"total": 50, "created_today": 5},
-            "system": {"memory_usage_mb": 128, "cpu_percent": 15.5}
+            "system": {"memory_usage_mb": 128, "cpu_percent": 15.5},
         }
 
         response = client.get("/api/health/metrics")

@@ -8,7 +8,12 @@ import pytest
 from sqlmodel import Session, SQLModel, create_engine
 from sqlalchemy.pool import StaticPool
 
-from src.database.engine import get_database_url, get_engine, get_session, create_db_and_tables
+from src.database.engine import (
+    get_database_url,
+    get_engine,
+    get_session,
+    create_db_and_tables,
+)
 
 
 def test_get_database_url_testing():
@@ -88,7 +93,7 @@ def test_engine_configuration_options():
     # Test with echo=True (if we had that option)
     # Currently echo is hardcoded to False, but we can test the structure
     engine = get_engine(testing=True)
-    assert hasattr(engine, 'echo')
+    assert hasattr(engine, "echo")
     assert engine.echo == False
 
 

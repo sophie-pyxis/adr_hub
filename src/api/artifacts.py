@@ -12,7 +12,12 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, status, Depends, Query, Response
 from sqlmodel import Session
 
-from ..models.artifact import ArtifactCreate, ArtifactUpdate, ArtifactStatusUpdate, ArtifactRead
+from ..models.artifact import (
+    ArtifactCreate,
+    ArtifactUpdate,
+    ArtifactStatusUpdate,
+    ArtifactRead,
+)
 from ..models.squad import Squad
 from ..services.artifact_service import ArtifactService
 from ..services.trigger_service import TriggerService
@@ -28,7 +33,7 @@ def get_artifact_service(session: Session = Depends(get_session)) -> ArtifactSer
 
 def get_trigger_service(
     session: Session = Depends(get_session),
-    artifact_service: ArtifactService = Depends(get_artifact_service)
+    artifact_service: ArtifactService = Depends(get_artifact_service),
 ) -> TriggerService:
     """Dependency injection for TriggerService."""
     return TriggerService(session, artifact_service)
@@ -38,7 +43,7 @@ def get_trigger_service(
 def get_artifacts(
     skip: int = 0,
     limit: int = 100,
-    artifact_service: ArtifactService = Depends(get_artifact_service)
+    artifact_service: ArtifactService = Depends(get_artifact_service),
 ):
     """
     Get all artifacts with pagination.
@@ -53,7 +58,7 @@ def get_artifacts(
 def create_artifact(
     artifact_data: ArtifactCreate,
     artifact_service: ArtifactService = Depends(get_artifact_service),
-    trigger_service: TriggerService = Depends(get_trigger_service)
+    trigger_service: TriggerService = Depends(get_trigger_service),
 ):
     """
     Create a new artifact.
@@ -86,7 +91,7 @@ def create_artifact(
         # Log unexpected errors
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error: {str(e)}"
+            detail=f"Internal server error: {str(e)}",
         )
 
 
@@ -96,7 +101,7 @@ def search_artifacts(
     squad_id: Optional[int] = Query(None, description="Filter by squad ID"),
     status: Optional[str] = Query(None, description="Filter by status"),
     level: Optional[int] = Query(None, ge=1, le=5, description="Filter by level (1-5)"),
-    artifact_service: ArtifactService = Depends(get_artifact_service)
+    artifact_service: ArtifactService = Depends(get_artifact_service),
 ):
     """
     Search artifacts with filtering.
@@ -108,10 +113,7 @@ def search_artifacts(
     """
     try:
         return artifact_service.search_artifacts(
-            artifact_type=artifact_type,
-            squad_id=squad_id,
-            status=status,
-            level=level
+            artifact_type=artifact_type, squad_id=squad_id, status=status, level=level
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -131,7 +133,7 @@ def get_artifact_types():
         "governance",
         "implementation",
         "visibility",
-        "uncommon"
+        "uncommon",
     ]
 
     return {"types": artifact_types}
@@ -144,21 +146,14 @@ def get_artifact_statuses():
 
     Returns all valid artifact status values.
     """
-    statuses = [
-        "proposed",
-        "accepted",
-        "rejected",
-        "superseded",
-        "discontinued"
-    ]
+    statuses = ["proposed", "accepted", "rejected", "superseded", "discontinued"]
 
     return {"statuses": statuses}
 
 
 @router.get("/{artifact_id}", response_model=ArtifactRead)
 def get_artifact_by_id(
-    artifact_id: int,
-    artifact_service: ArtifactService = Depends(get_artifact_service)
+    artifact_id: int, artifact_service: ArtifactService = Depends(get_artifact_service)
 ):
     """
     Get artifact by ID.
@@ -169,7 +164,7 @@ def get_artifact_by_id(
     if not artifact:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Artifact with ID '{artifact_id}' not found"
+            detail=f"Artifact with ID '{artifact_id}' not found",
         )
     return artifact
 
@@ -178,7 +173,7 @@ def get_artifact_by_id(
 def update_artifact(
     artifact_id: int,
     artifact_update: ArtifactUpdate,
-    artifact_service: ArtifactService = Depends(get_artifact_service)
+    artifact_service: ArtifactService = Depends(get_artifact_service),
 ):
     """
     Update an artifact.
@@ -195,7 +190,7 @@ def update_artifact(
         if not artifact:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Artifact with ID '{artifact_id}' not found"
+                detail=f"Artifact with ID '{artifact_id}' not found",
             )
         return artifact
     except ValueError as e:
@@ -204,8 +199,7 @@ def update_artifact(
 
 @router.delete("/{artifact_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_artifact(
-    artifact_id: int,
-    artifact_service: ArtifactService = Depends(get_artifact_service)
+    artifact_id: int, artifact_service: ArtifactService = Depends(get_artifact_service)
 ):
     """
     Delete an artifact.
@@ -216,7 +210,7 @@ def delete_artifact(
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Artifact with ID '{artifact_id}' not found"
+            detail=f"Artifact with ID '{artifact_id}' not found",
         )
 
 
@@ -225,7 +219,7 @@ def update_artifact_status(
     artifact_id: int,
     status_update: ArtifactStatusUpdate,
     artifact_service: ArtifactService = Depends(get_artifact_service),
-    trigger_service: TriggerService = Depends(get_trigger_service)
+    trigger_service: TriggerService = Depends(get_trigger_service),
 ):
     """
     Update artifact status with validation.
@@ -241,18 +235,20 @@ def update_artifact_status(
         if not artifact:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Artifact with ID '{artifact_id}' not found"
+                detail=f"Artifact with ID '{artifact_id}' not found",
             )
 
         # Validate required triggers before status update
         trigger_service.validate_required_triggers(artifact)
 
         # Update the status
-        updated_artifact = artifact_service.update_artifact_status(artifact_id, status_update)
+        updated_artifact = artifact_service.update_artifact_status(
+            artifact_id, status_update
+        )
         if not updated_artifact:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Artifact with ID '{artifact_id}' not found"
+                detail=f"Artifact with ID '{artifact_id}' not found",
             )
 
         # Check and process any triggers that might now be satisfied
@@ -264,12 +260,9 @@ def update_artifact_status(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-
-
 @router.get("/{artifact_id}/file")
 def get_artifact_file(
-    artifact_id: int,
-    artifact_service: ArtifactService = Depends(get_artifact_service)
+    artifact_id: int, artifact_service: ArtifactService = Depends(get_artifact_service)
 ):
     """
     Get artifact file content.
@@ -281,7 +274,7 @@ def get_artifact_file(
     if content is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"File not found for artifact with ID '{artifact_id}'"
+            detail=f"File not found for artifact with ID '{artifact_id}'",
         )
 
     return Response(content=content, media_type="text/markdown; charset=utf-8")

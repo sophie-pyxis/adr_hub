@@ -47,13 +47,13 @@ def get_engine(testing: bool = False):
             database_url,
             connect_args={"check_same_thread": False},
             poolclass=StaticPool,  # Required for in-memory SQLite
-            echo=False  # Set to True for SQL query logging
+            echo=False,  # Set to True for SQL query logging
         )
     else:
         engine = create_engine(
             database_url,
             connect_args={"check_same_thread": False},
-            echo=False  # Set to True for SQL query logging
+            echo=False,  # Set to True for SQL query logging
         )
 
     return engine

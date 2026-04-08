@@ -8,8 +8,6 @@ from fastapi.testclient import TestClient
 from src.main import app
 
 
-
-
 def test_read_root(client):
     """Test root endpoint."""
     response = client.get("/")
@@ -61,12 +59,16 @@ def test_routers_registered(client):
     # Test squads router - route should exist (not 404)
     response = client.get("/api/squads")
     # Route exists if status code is not 404
-    assert response.status_code != 404, f"/api/squads route not found (got {response.status_code})"
+    assert (
+        response.status_code != 404
+    ), f"/api/squads route not found (got {response.status_code})"
 
     # Test artifacts router (replaces adrs) - route should exist (not 404)
     response = client.get("/api/artifacts")
     # Route exists if status code is not 404
-    assert response.status_code != 404, f"/api/artifacts route not found (got {response.status_code})"
+    assert (
+        response.status_code != 404
+    ), f"/api/artifacts route not found (got {response.status_code})"
 
 
 def test_startup_event():
@@ -87,4 +89,5 @@ def test_startup_event_coverage():
     # We can't easily test the actual execution without mocking
     # But we can verify the function exists and is callable
     from src.main import on_startup
+
     assert callable(on_startup)

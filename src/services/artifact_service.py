@@ -7,13 +7,20 @@ PHASE 3: Artifact Service
 - Auto-number generation for all artifact types
 - Validation and schema matching
 """
+
 import re
 from typing import List, Optional, Dict, Any
 from sqlmodel import Session, select, or_
 from datetime import datetime
 from pathlib import Path
 
-from ..models.artifact import Artifact, ArtifactCreate, ArtifactUpdate, ArtifactStatusUpdate, ArtifactRead
+from ..models.artifact import (
+    Artifact,
+    ArtifactCreate,
+    ArtifactUpdate,
+    ArtifactStatusUpdate,
+    ArtifactRead,
+)
 from ..models.squad import Squad
 from .squad_service import SquadService
 from .template_service import TemplateService
@@ -41,7 +48,7 @@ class ArtifactService:
         "rejected": ["reopened"],
         "reopened": ["accepted", "rejected"],
         "superseded": [],  # Terminal state
-        "discontinued": []  # Terminal state
+        "discontinued": [],  # Terminal state
     }
 
     def __init__(
@@ -67,6 +74,7 @@ class ArtifactService:
         # Note: In production, this would use dependency injection
         # For now, we create a new session
         from ..database.engine import get_engine
+
         engine = get_engine(testing=False)
         return Session(engine)
 
@@ -93,7 +101,7 @@ class ArtifactService:
             query = select(Artifact).where(
                 Artifact.artifact_type == "adr",
                 Artifact.level == level,
-                Artifact.squad_id == squad_id
+                Artifact.squad_id == squad_id,
             )
             adrs = session.exec(query).all()
 
@@ -115,8 +123,7 @@ class ArtifactService:
             current_year = datetime.now().year
 
             query = select(Artifact).where(
-                Artifact.artifact_type == "rfc",
-                Artifact.squad_id == squad_id
+                Artifact.artifact_type == "rfc", Artifact.squad_id == squad_id
             )
             rfcs = session.exec(query).all()
 
@@ -138,8 +145,7 @@ class ArtifactService:
             current_year = datetime.now().year
 
             query = select(Artifact).where(
-                Artifact.artifact_type == "evidence",
-                Artifact.squad_id == squad_id
+                Artifact.artifact_type == "evidence", Artifact.squad_id == squad_id
             )
             evidence_items = session.exec(query).all()
 
@@ -161,8 +167,7 @@ class ArtifactService:
             current_year = datetime.now().year
 
             query = select(Artifact).where(
-                Artifact.artifact_type == "governance",
-                Artifact.squad_id == squad_id
+                Artifact.artifact_type == "governance", Artifact.squad_id == squad_id
             )
             governance_items = session.exec(query).all()
 
@@ -183,7 +188,7 @@ class ArtifactService:
             # For Implementation: IMP-{sequence:03d}
             query = select(Artifact).where(
                 Artifact.artifact_type == "implementation",
-                Artifact.squad_id == squad_id
+                Artifact.squad_id == squad_id,
             )
             implementations = session.exec(query).all()
 
@@ -203,8 +208,7 @@ class ArtifactService:
         elif artifact_type == "visibility":
             # For Visibility: VIS-{sequence:03d}
             query = select(Artifact).where(
-                Artifact.artifact_type == "visibility",
-                Artifact.squad_id == squad_id
+                Artifact.artifact_type == "visibility", Artifact.squad_id == squad_id
             )
             visibility_items = session.exec(query).all()
 
@@ -226,8 +230,7 @@ class ArtifactService:
             current_year = datetime.now().year
 
             query = select(Artifact).where(
-                Artifact.artifact_type == "uncommon",
-                Artifact.squad_id == squad_id
+                Artifact.artifact_type == "uncommon", Artifact.squad_id == squad_id
             )
             uncommon_items = session.exec(query).all()
 
@@ -271,12 +274,15 @@ class ArtifactService:
             )
 
         # Generate artifact number if not provided or "auto"
-        if not artifact_create.artifact_number or artifact_create.artifact_number == "auto":
+        if (
+            not artifact_create.artifact_number
+            or artifact_create.artifact_number == "auto"
+        ):
             artifact_number = self._generate_artifact_number(
                 artifact_create.artifact_type,
                 artifact_create.level,
                 artifact_create.squad_id,
-                session
+                session,
             )
         else:
             artifact_number = artifact_create.artifact_number
@@ -300,15 +306,16 @@ class ArtifactService:
                 if not artifact_create.lgpd_analysis:
                     raise ValueError("lgpd_analysis is required for ADR level >= 4")
                 if not artifact_create.health_compliance_impact:
-                    raise ValueError("health_compliance_impact is required for ADR level >= 4")
+                    raise ValueError(
+                        "health_compliance_impact is required for ADR level >= 4"
+                    )
             if artifact_create.level >= 3:
                 if not artifact_create.rfc_status:
                     raise ValueError("rfc_status is required for ADR level >= 3")
 
         # Validate template requirements
         self.template_service.validate_artifact_against_template(
-            artifact_create.artifact_type,
-            artifact_data
+            artifact_create.artifact_type, artifact_data
         )
 
         # Generate content from template
@@ -332,9 +339,13 @@ class ArtifactService:
         # Generate and save markdown file
         try:
             type_folder_map = {
-                "adr": "decisions", "rfc": "rfcs", "evidence": "evidence",
-                "governance": "governance", "implementation": "implementation",
-                "visibility": "visibility", "uncommon": "uncommon",
+                "adr": "decisions",
+                "rfc": "rfcs",
+                "evidence": "evidence",
+                "governance": "governance",
+                "implementation": "implementation",
+                "visibility": "visibility",
+                "uncommon": "uncommon",
             }
             folder = type_folder_map.get(artifact.artifact_type, artifact.artifact_type)
             arch_root = Path(__file__).parent.parent.parent / "architecture"
@@ -402,7 +413,7 @@ class ArtifactService:
         status: Optional[str] = None,
         squad_id: Optional[int] = None,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> List[ArtifactRead]:
         """
         List artifacts with optional filtering.
@@ -453,9 +464,7 @@ class ArtifactService:
         return result
 
     def update_artifact(
-        self,
-        artifact_number: str,
-        artifact_update: ArtifactUpdate
+        self, artifact_number: str, artifact_update: ArtifactUpdate
     ) -> Optional[ArtifactRead]:
         """
         Update an artifact.
@@ -494,7 +503,9 @@ class ArtifactService:
                 if not artifact.lgpd_analysis:
                     raise ValueError("lgpd_analysis is required for ADR level >= 4")
                 if not artifact.health_compliance_impact:
-                    raise ValueError("health_compliance_impact is required for ADR level >= 4")
+                    raise ValueError(
+                        "health_compliance_impact is required for ADR level >= 4"
+                    )
 
             if new_level >= 3 and not artifact.rfc_status:
                 raise ValueError("rfc_status is required for ADR level >= 3")
@@ -505,8 +516,13 @@ class ArtifactService:
                 raise ValueError("tco_estimate cannot be empty for ADR level >= 4")
             if "lgpd_analysis" in update_data and not update_data["lgpd_analysis"]:
                 raise ValueError("lgpd_analysis cannot be empty for ADR level >= 4")
-            if "health_compliance_impact" in update_data and not update_data["health_compliance_impact"]:
-                raise ValueError("health_compliance_impact cannot be empty for ADR level >= 4")
+            if (
+                "health_compliance_impact" in update_data
+                and not update_data["health_compliance_impact"]
+            ):
+                raise ValueError(
+                    "health_compliance_impact cannot be empty for ADR level >= 4"
+                )
 
         session.add(artifact)
         session.commit()
@@ -522,9 +538,7 @@ class ArtifactService:
         return artifact_read
 
     def update_artifact_status(
-        self,
-        artifact_number: str,
-        status_update: ArtifactStatusUpdate
+        self, artifact_number: str, status_update: ArtifactStatusUpdate
     ) -> Optional[ArtifactRead]:
         """
         Update artifact status with validation.
@@ -562,7 +576,9 @@ class ArtifactService:
         if new_status == "superseded":
             # Validate superseded_by artifact exists
             superseded_artifact = session.exec(
-                select(Artifact).where(Artifact.artifact_number == status_update.superseded_by)
+                select(Artifact).where(
+                    Artifact.artifact_number == status_update.superseded_by
+                )
             ).first()
             if not superseded_artifact:
                 raise ValueError(
@@ -594,7 +610,7 @@ class ArtifactService:
         query: str,
         artifact_type: Optional[str] = None,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> List[ArtifactRead]:
         """
         Search artifacts by title or content.
@@ -615,7 +631,7 @@ class ArtifactService:
         sql_query = select(Artifact).where(
             or_(
                 Artifact.title.ilike(search_pattern),
-                Artifact.content.ilike(search_pattern)
+                Artifact.content.ilike(search_pattern),
             )
         )
 
@@ -734,37 +750,46 @@ class ArtifactService:
 
             # Get counts by type
             by_type = {}
-            artifact_types = ["adr", "rfc", "evidence", "governance", "implementation", "visibility", "uncommon"]
+            artifact_types = [
+                "adr",
+                "rfc",
+                "evidence",
+                "governance",
+                "implementation",
+                "visibility",
+                "uncommon",
+            ]
 
             for artifact_type in artifact_types:
-                count = len(session.exec(
-                    select(Artifact).where(Artifact.artifact_type == artifact_type)
-                ).all())
+                count = len(
+                    session.exec(
+                        select(Artifact).where(Artifact.artifact_type == artifact_type)
+                    ).all()
+                )
                 if count > 0:
                     by_type[artifact_type] = count
 
             # Get counts by status
             by_status = {}
-            statuses = ["proposed", "accepted", "rejected", "superseded", "discontinued"]
+            statuses = [
+                "proposed",
+                "accepted",
+                "rejected",
+                "superseded",
+                "discontinued",
+            ]
 
             for status in statuses:
-                count = len(session.exec(
-                    select(Artifact).where(Artifact.status == status)
-                ).all())
+                count = len(
+                    session.exec(
+                        select(Artifact).where(Artifact.status == status)
+                    ).all()
+                )
                 if count > 0:
                     by_status[status] = count
 
-            return {
-                "total": total,
-                "by_type": by_type,
-                "by_status": by_status
-            }
+            return {"total": total, "by_type": by_type, "by_status": by_status}
 
         except Exception as e:
             # Return empty counts on error
-            return {
-                "total": 0,
-                "by_type": {},
-                "by_status": {},
-                "error": str(e)
-            }
+            return {"total": 0, "by_type": {}, "by_status": {}, "error": str(e)}

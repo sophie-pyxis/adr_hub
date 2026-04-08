@@ -27,8 +27,7 @@ def get_artifact_service(session: Session = Depends(get_session)) -> ArtifactSer
 
 @router.post("/", response_model=SquadRead, status_code=status.HTTP_201_CREATED)
 def create_squad(
-    squad_create: SquadCreate,
-    squad_service: SquadService = Depends(get_squad_service)
+    squad_create: SquadCreate, squad_service: SquadService = Depends(get_squad_service)
 ):
     """
     Create a new squad.
@@ -50,7 +49,7 @@ def list_squads(
     status: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
-    squad_service: SquadService = Depends(get_squad_service)
+    squad_service: SquadService = Depends(get_squad_service),
 ):
     """
     List all squads with optional filtering.
@@ -64,8 +63,7 @@ def list_squads(
 
 @router.get("/{squad_code}", response_model=SquadRead)
 def get_squad(
-    squad_code: str,
-    squad_service: SquadService = Depends(get_squad_service)
+    squad_code: str, squad_service: SquadService = Depends(get_squad_service)
 ):
     """
     Get squad by code.
@@ -76,7 +74,7 @@ def get_squad(
     if not squad:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Squad with code '{squad_code}' not found"
+            detail=f"Squad with code '{squad_code}' not found",
         )
     return squad
 
@@ -85,7 +83,7 @@ def get_squad(
 def update_squad(
     squad_code: str,
     squad_update: SquadUpdate,
-    squad_service: SquadService = Depends(get_squad_service)
+    squad_service: SquadService = Depends(get_squad_service),
 ):
     """
     Update a squad.
@@ -104,7 +102,7 @@ def update_squad(
     if not squad:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Squad with code '{squad_code}' not found"
+            detail=f"Squad with code '{squad_code}' not found",
         )
     return squad
 
@@ -113,7 +111,7 @@ def update_squad(
 def delete_squad(
     squad_code: str,
     reason: str = "Discontinued by user",
-    squad_service: SquadService = Depends(get_squad_service)
+    squad_service: SquadService = Depends(get_squad_service),
 ):
     """
     Soft delete a squad (mark as discontinued).
@@ -125,7 +123,7 @@ def delete_squad(
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Squad with code '{squad_code}' not found"
+            detail=f"Squad with code '{squad_code}' not found",
         )
 
 
@@ -133,7 +131,7 @@ def delete_squad(
 def get_squad_artifacts(
     squad_code: str,
     squad_service: SquadService = Depends(get_squad_service),
-    artifact_service: ArtifactService = Depends(get_artifact_service)
+    artifact_service: ArtifactService = Depends(get_artifact_service),
 ):
     """
     Get all artifacts for a specific squad.
@@ -145,7 +143,7 @@ def get_squad_artifacts(
     if not squad:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Squad with code '{squad_code}' not found"
+            detail=f"Squad with code '{squad_code}' not found",
         )
 
     # Get artifacts for this squad

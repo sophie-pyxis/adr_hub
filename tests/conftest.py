@@ -27,6 +27,7 @@ def session_fixture():
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
     """Create FastAPI TestClient with overridden database session."""
+
     def get_session_override():
         return session
 
@@ -43,7 +44,7 @@ def test_squad_data_fixture():
         "squad_code": "ai-engineering",
         "name": "AI Engineering Squad",
         "tech_lead": "Carlos Mendes",
-        "status": "active"
+        "status": "active",
     }
 
 
@@ -60,5 +61,5 @@ def test_adr_data_fixture():
         "health_compliance_impact": "HIPAA compliance required for healthcare data",
         "lgpd_analysis": "Data anonymization required for Brazilian LGPD compliance",
         "rfc_status": "RFC-0001 completed",
-        "squad_id": 1  # Will be set after squad creation
+        "squad_id": 1,  # Will be set after squad creation
     }

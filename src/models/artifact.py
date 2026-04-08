@@ -1,6 +1,7 @@
 """
 Unified artifact model for all artifact types.
 """
+
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
@@ -18,71 +19,66 @@ class ArtifactBase(SQLModel):
     artifact_type: str = Field(
         ...,
         description="Type of artifact: adr, rfc, evidence, governance, implementation, visibility, uncommon",
-        max_length=20
+        max_length=20,
     )
     artifact_number: str = Field(
         ...,
         description="Artifact number format varies by type, or 'auto' for auto-generation",
         max_length=50,
-        unique=True
+        unique=True,
     )
     title: str = Field(..., description="Title of the artifact", max_length=200)
     status: str = Field(
         default="proposed",
-        description="Artifact status: proposed, accepted, rejected, superseded, discontinued"
+        description="Artifact status: proposed, accepted, rejected, superseded, discontinued",
     )
     level: Optional[int] = Field(
-        default=None,
-        description="Level (1-5) for ADRs only",
-        ge=1,
-        le=5
+        default=None, description="Level (1-5) for ADRs only", ge=1, le=5
     )
     content: str = Field(..., description="Artifact content in Markdown format")
     file_path: Optional[str] = Field(
-        default=None,
-        description="Path to the generated markdown file",
-        max_length=500
+        default=None, description="Path to the generated markdown file", max_length=500
     )
     template_used: Optional[str] = Field(
         default=None,
         description="Template used to generate this artifact",
-        max_length=100
+        max_length=100,
     )
-    squad_id: int = Field(..., foreign_key="squad.id", description="ID of the owning squad")
+    squad_id: int = Field(
+        ..., foreign_key="squad.id", description="ID of the owning squad"
+    )
     triggered_by_id: Optional[int] = Field(
         default=None,
         foreign_key="artifact.id",
-        description="ID of the artifact that triggered this one"
+        description="ID of the artifact that triggered this one",
     )
     trigger_reason: Optional[str] = Field(
         default=None,
         description="Reason for trigger (if triggered_by is set)",
-        max_length=500
+        max_length=500,
     )
     tco_estimate: Optional[str] = Field(
         default=None,
         description="Total Cost of Ownership estimate (for ADR level >= 4)",
-        max_length=500
+        max_length=500,
     )
     lgpd_analysis: Optional[str] = Field(
         default=None,
         description="LGPD (Brazilian GDPR) compliance analysis (for ADR level >= 4)",
-        max_length=1000
+        max_length=1000,
     )
     rfc_status: Optional[str] = Field(
         default=None,
         description="RFC status (required for ADR level >= 3)",
-        max_length=50
+        max_length=50,
     )
     health_compliance_impact: Optional[str] = Field(
         default=None,
         description="Health compliance impact analysis (for healthcare organizations)",
-        max_length=1000
+        max_length=1000,
     )
     created_by_ip: Optional[str] = Field(
-        default=None,
-        description="IP address of the creator",
-        max_length=45
+        default=None, description="IP address of the creator", max_length=45
     )
 
     @field_validator("artifact_type")
@@ -90,11 +86,18 @@ class ArtifactBase(SQLModel):
     def validate_artifact_type(cls, v: str) -> str:
         """Validate artifact type."""
         allowed_types = {
-            "adr", "rfc", "evidence", "governance",
-            "implementation", "visibility", "uncommon"
+            "adr",
+            "rfc",
+            "evidence",
+            "governance",
+            "implementation",
+            "visibility",
+            "uncommon",
         }
         if v not in allowed_types:
-            raise ValueError(f"artifact_type must be one of: {', '.join(sorted(allowed_types))}")
+            raise ValueError(
+                f"artifact_type must be one of: {', '.join(sorted(allowed_types))}"
+            )
         return v
 
     @field_validator("artifact_number")
@@ -112,11 +115,17 @@ class ArtifactBase(SQLModel):
     def validate_status(cls, v: str) -> str:
         """Validate status value."""
         allowed_statuses = {
-            "proposed", "accepted", "rejected", "reopened",
-            "superseded", "discontinued"
+            "proposed",
+            "accepted",
+            "rejected",
+            "reopened",
+            "superseded",
+            "discontinued",
         }
         if v not in allowed_statuses:
-            raise ValueError(f"status must be one of: {', '.join(sorted(allowed_statuses))}")
+            raise ValueError(
+                f"status must be one of: {', '.join(sorted(allowed_statuses))}"
+            )
         return v
 
     @field_validator("level")
@@ -143,19 +152,27 @@ class ArtifactBase(SQLModel):
                 raise ValueError("RFC artifact_number must be in format RFC-YYYY-XXX")
         elif self.artifact_type == "evidence":
             if not re.match(r"^EVI-\d{4}-\d{3}$", self.artifact_number):
-                raise ValueError("Evidence artifact_number must be in format EVI-YYYY-XXX")
+                raise ValueError(
+                    "Evidence artifact_number must be in format EVI-YYYY-XXX"
+                )
         elif self.artifact_type == "governance":
             if not re.match(r"^GOV-\d{4}-\d{3}$", self.artifact_number):
-                raise ValueError("Governance artifact_number must be in format GOV-YYYY-XXX")
+                raise ValueError(
+                    "Governance artifact_number must be in format GOV-YYYY-XXX"
+                )
         elif self.artifact_type == "implementation":
             if not re.match(r"^IMP-\d{3}$", self.artifact_number):
-                raise ValueError("Implementation artifact_number must be in format IMP-XXX")
+                raise ValueError(
+                    "Implementation artifact_number must be in format IMP-XXX"
+                )
         elif self.artifact_type == "visibility":
             if not re.match(r"^VIS-\d{3}$", self.artifact_number):
                 raise ValueError("Visibility artifact_number must be in format VIS-XXX")
         elif self.artifact_type == "uncommon":
             if not re.match(r"^UNC-\d{4}-\d{3}$", self.artifact_number):
-                raise ValueError("Uncommon artifact_number must be in format UNC-YYYY-XXX")
+                raise ValueError(
+                    "Uncommon artifact_number must be in format UNC-YYYY-XXX"
+                )
 
         return self
 
@@ -186,7 +203,9 @@ class ArtifactBase(SQLModel):
             if self.rfc_status:
                 raise ValueError("rfc_status can only be set for ADR artifacts")
             if self.health_compliance_impact:
-                raise ValueError("health_compliance_impact can only be set for ADR artifacts")
+                raise ValueError(
+                    "health_compliance_impact can only be set for ADR artifacts"
+                )
 
         return self
 
@@ -203,7 +222,7 @@ class Artifact(ArtifactBase, table=True):
     triggered_by: Optional["Artifact"] = Relationship(
         sa_relationship_kwargs={
             "remote_side": "Artifact.id",
-            "foreign_keys": "Artifact.triggered_by_id"
+            "foreign_keys": "Artifact.triggered_by_id",
         }
     )
 
@@ -212,8 +231,8 @@ class Artifact(ArtifactBase, table=True):
         back_populates="from_artifact",
         sa_relationship_kwargs={
             "foreign_keys": "ArtifactReference.from_artifact_id",
-            "cascade": "all, delete-orphan"
-        }
+            "cascade": "all, delete-orphan",
+        },
     )
 
     # References where this artifact is the target
@@ -221,17 +240,19 @@ class Artifact(ArtifactBase, table=True):
         back_populates="to_artifact",
         sa_relationship_kwargs={
             "foreign_keys": "ArtifactReference.to_artifact_id",
-            "cascade": "all, delete-orphan"
-        }
+            "cascade": "all, delete-orphan",
+        },
     )
 
     class Config:
         """Pydantic config."""
+
         from_attributes = True
 
 
 class ArtifactCreate(ArtifactBase):
     """Schema for creating a new artifact."""
+
     pass
 
 
@@ -242,7 +263,7 @@ class ArtifactUpdate(SQLModel):
     content: Optional[str] = Field(default=None)
     status: Optional[str] = Field(
         default=None,
-        description="Artifact status: proposed, accepted, rejected, superseded, discontinued"
+        description="Artifact status: proposed, accepted, rejected, superseded, discontinued",
     )
     level: Optional[int] = Field(default=None, ge=1, le=5)
     tco_estimate: Optional[str] = Field(default=None, max_length=500)
@@ -257,11 +278,17 @@ class ArtifactUpdate(SQLModel):
         """Validate status value if provided."""
         if v is not None:
             allowed_statuses = {
-                "proposed", "accepted", "rejected", "reopened",
-                "superseded", "discontinued"
+                "proposed",
+                "accepted",
+                "rejected",
+                "reopened",
+                "superseded",
+                "discontinued",
             }
             if v not in allowed_statuses:
-                raise ValueError(f"status must be one of: {', '.join(sorted(allowed_statuses))}")
+                raise ValueError(
+                    f"status must be one of: {', '.join(sorted(allowed_statuses))}"
+                )
         return v
 
 
@@ -270,17 +297,17 @@ class ArtifactStatusUpdate(SQLModel):
 
     status: str = Field(
         ...,
-        description="New artifact status: proposed, accepted, rejected, superseded, discontinued"
+        description="New artifact status: proposed, accepted, rejected, superseded, discontinued",
     )
     superseded_by: Optional[str] = Field(
         default=None,
         description="Artifact number that supersedes this one (required for status=superseded)",
-        max_length=50
+        max_length=50,
     )
     rejection_reason: Optional[str] = Field(
         default=None,
         description="Reason for rejection (required for status=rejected)",
-        max_length=500
+        max_length=500,
     )
 
     @field_validator("status")
@@ -288,11 +315,17 @@ class ArtifactStatusUpdate(SQLModel):
     def validate_status(cls, v: str) -> str:
         """Validate status value."""
         allowed_statuses = {
-            "proposed", "accepted", "rejected", "reopened",
-            "superseded", "discontinued"
+            "proposed",
+            "accepted",
+            "rejected",
+            "reopened",
+            "superseded",
+            "discontinued",
         }
         if v not in allowed_statuses:
-            raise ValueError(f"status must be one of: {', '.join(sorted(allowed_statuses))}")
+            raise ValueError(
+                f"status must be one of: {', '.join(sorted(allowed_statuses))}"
+            )
         return v
 
     @model_validator(mode="after")

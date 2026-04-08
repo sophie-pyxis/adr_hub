@@ -26,14 +26,16 @@ def get_artifact_service(session: Session = Depends(get_session)) -> ArtifactSer
 
 def get_health_service(
     session: Session = Depends(get_session),
-    artifact_service: ArtifactService = Depends(get_artifact_service)
+    artifact_service: ArtifactService = Depends(get_artifact_service),
 ) -> HealthService:
     """Dependency injection for HealthService."""
     return HealthService(session, artifact_service)
 
 
 @router.get("/")
-def get_health_status(health_service: HealthService = Depends(get_health_service)) -> Dict[str, Any]:
+def get_health_status(
+    health_service: HealthService = Depends(get_health_service),
+) -> Dict[str, Any]:
     """
     Get overall system health status.
 
@@ -48,7 +50,7 @@ def get_health_status(health_service: HealthService = Depends(get_health_service
             raise HTTPException(
                 status_code=503,
                 detail="System is unhealthy",
-                headers={"Retry-After": "30"}
+                headers={"Retry-After": "30"},
             )
 
         return health_status
@@ -56,10 +58,7 @@ def get_health_status(health_service: HealthService = Depends(get_health_service
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error checking health: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error checking health: {str(e)}")
 
 
 @router.get("/readiness")
@@ -85,7 +84,9 @@ def get_liveness() -> Dict[str, Any]:
 
 
 @router.get("/metrics")
-def get_detailed_metrics(health_service: HealthService = Depends(get_health_service)) -> Dict[str, Any]:
+def get_detailed_metrics(
+    health_service: HealthService = Depends(get_health_service),
+) -> Dict[str, Any]:
     """
     Get detailed system metrics for monitoring.
 
@@ -97,7 +98,4 @@ def get_detailed_metrics(health_service: HealthService = Depends(get_health_serv
         return metrics
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error getting metrics: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error getting metrics: {str(e)}")

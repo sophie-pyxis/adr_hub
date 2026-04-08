@@ -25,7 +25,7 @@ print(f"src/models/trigger_rule.py exists: {os.path.exists(trigger_rule_path)}")
 
 # Try to read the file directly
 try:
-    with open(trigger_rule_path, 'r') as f:
+    with open(trigger_rule_path, "r") as f:
         first_line = f.readline()
         print(f"First line of trigger_rule.py: {first_line}")
 except Exception as e:
@@ -35,6 +35,7 @@ except Exception as e:
 print("\nTrying direct import via file path...")
 try:
     import importlib.util
+
     spec = importlib.util.spec_from_file_location("trigger_rule", trigger_rule_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

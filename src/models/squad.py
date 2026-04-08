@@ -19,18 +19,17 @@ class SquadBase(SQLModel):
         ...,
         description="Unique squad code (lowercase, no spaces, a-z0-9-_)",
         min_length=3,
-        max_length=50
+        max_length=50,
     )
     name: str = Field(..., description="Display name of the squad", max_length=100)
     tech_lead: str = Field(..., description="Name of the Tech Lead", max_length=100)
     status: str = Field(
-        default="active",
-        description="Squad status: active, discontinued, archived"
+        default="active", description="Squad status: active, discontinued, archived"
     )
     discontinued_reason: Optional[str] = Field(
         default=None,
         description="Reason for discontinuation (required if status=discontinued)",
-        max_length=500
+        max_length=500,
     )
 
     @field_validator("squad_code")
@@ -79,15 +78,19 @@ class Squad(SquadBase, table=True):
     deleted_at: Optional[datetime] = Field(default=None)
 
     # Relationships
-    artifacts: List["Artifact"] = Relationship(back_populates="squad", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    artifacts: List["Artifact"] = Relationship(
+        back_populates="squad", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
     class Config:
         """Pydantic config."""
+
         from_attributes = True
 
 
 class SquadCreate(SquadBase):
     """Schema for creating a new squad."""
+
     pass
 
 
@@ -97,8 +100,7 @@ class SquadUpdate(SQLModel):
     name: Optional[str] = Field(default=None, max_length=100)
     tech_lead: Optional[str] = Field(default=None, max_length=100)
     status: Optional[str] = Field(
-        default=None,
-        description="Squad status: active, discontinued, archived"
+        default=None, description="Squad status: active, discontinued, archived"
     )
     discontinued_reason: Optional[str] = Field(default=None, max_length=500)
 
@@ -109,7 +111,9 @@ class SquadUpdate(SQLModel):
         if v is not None:
             allowed_statuses = {"active", "discontinued", "archived"}
             if v not in allowed_statuses:
-                raise ValueError(f"status must be one of: {', '.join(allowed_statuses)}")
+                raise ValueError(
+                    f"status must be one of: {', '.join(allowed_statuses)}"
+                )
         return v
 
     @field_validator("discontinued_reason")

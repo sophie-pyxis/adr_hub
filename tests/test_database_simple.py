@@ -5,7 +5,12 @@ Simple test suite for database engine configuration.
 import pytest
 from sqlmodel import Session
 
-from src.database.engine import get_database_url, get_engine, get_session, create_db_and_tables
+from src.database.engine import (
+    get_database_url,
+    get_engine,
+    get_session,
+    create_db_and_tables,
+)
 
 
 def test_get_database_url_testing():

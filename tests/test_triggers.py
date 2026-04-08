@@ -7,6 +7,7 @@ PHASE 4: Trigger Service
 - Integration with artifact service
 - Safe evaluation of condition expressions
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from sqlmodel import Session, select
@@ -46,7 +47,7 @@ def test_get_rules_for_source_type():
             target_type="governance",
             auto_create=True,
             required=True,
-            description="ADR level 4+ requires governance artifact"
+            description="ADR level 4+ requires governance artifact",
         ),
         TriggerRule(
             id=2,
@@ -55,8 +56,8 @@ def test_get_rules_for_source_type():
             target_type="implementation",
             auto_create=False,
             required=False,
-            description="Accepted ADRs may need implementation artifact"
-        )
+            description="Accepted ADRs may need implementation artifact",
+        ),
     ]
 
     mock_session.exec.return_value.all.return_value = mock_rules
@@ -98,7 +99,7 @@ def test_evaluate_condition_simple():
         status="proposed",
         level=3,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     # Simple condition
@@ -128,7 +129,7 @@ def test_evaluate_condition_complex():
         status="accepted",
         level=4,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     # Complex condition
@@ -157,7 +158,7 @@ def test_evaluate_condition_with_string_literal():
         title="Test RFC",
         status="proposed",
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     condition = "status == 'proposed'"
@@ -186,7 +187,7 @@ def test_evaluate_condition_invalid_attribute():
         status="proposed",
         level=3,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     # Invalid attribute (should be caught by safe evaluation)
@@ -211,7 +212,7 @@ def test_evaluate_condition_malformed():
         status="proposed",
         level=3,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     # Malformed condition
@@ -236,7 +237,7 @@ def test_check_triggers_for_artifact():
         status="accepted",
         level=4,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     # Mock rules
@@ -248,7 +249,7 @@ def test_check_triggers_for_artifact():
             target_type="governance",
             auto_create=True,
             required=True,
-            description="ADR level 4+ requires governance artifact"
+            description="ADR level 4+ requires governance artifact",
         ),
         TriggerRule(
             id=2,
@@ -257,12 +258,12 @@ def test_check_triggers_for_artifact():
             target_type="evidence",
             auto_create=False,
             required=False,
-            description="Rejected ADRs may need evidence"
-        )
+            description="Rejected ADRs may need evidence",
+        ),
     ]
 
-    with patch.object(service, 'get_rules_for_source_type', return_value=mock_rules):
-        with patch.object(service, 'evaluate_condition', side_effect=[True, False]):
+    with patch.object(service, "get_rules_for_source_type", return_value=mock_rules):
+        with patch.object(service, "evaluate_condition", side_effect=[True, False]):
             triggers = service.check_triggers_for_artifact(artifact)
 
     assert len(triggers) == 2
@@ -289,7 +290,7 @@ def test_check_triggers_for_artifact_no_matches():
         title="Test RFC",
         status="proposed",
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     mock_rules = [
@@ -300,12 +301,12 @@ def test_check_triggers_for_artifact_no_matches():
             target_type="implementation",
             auto_create=False,
             required=False,
-            description="Accepted RFCs may need implementation"
+            description="Accepted RFCs may need implementation",
         )
     ]
 
-    with patch.object(service, 'get_rules_for_source_type', return_value=mock_rules):
-        with patch.object(service, 'evaluate_condition', return_value=False):
+    with patch.object(service, "get_rules_for_source_type", return_value=mock_rules):
+        with patch.object(service, "evaluate_condition", return_value=False):
             triggers = service.check_triggers_for_artifact(artifact)
 
     assert len(triggers) == 1
@@ -330,7 +331,7 @@ def test_create_target_artifact_auto():
         status="accepted",
         level=4,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     trigger_rule = TriggerRule(
@@ -340,7 +341,7 @@ def test_create_target_artifact_auto():
         target_type="governance",
         auto_create=True,
         required=True,
-        description="ADR level 4+ requires governance artifact"
+        description="ADR level 4+ requires governance artifact",
     )
 
     # Mock artifact creation
@@ -353,7 +354,7 @@ def test_create_target_artifact_auto():
         content="Auto-generated governance artifact",
         squad_id=1,
         triggered_by_id=1,
-        trigger_reason="Auto-created by trigger rule: ADR level 4+ requires governance artifact"
+        trigger_reason="Auto-created by trigger rule: ADR level 4+ requires governance artifact",
     )
 
     mock_artifact_service.create_artifact.return_value = mock_created_artifact
@@ -389,7 +390,7 @@ def test_create_target_artifact_not_auto():
         status="accepted",
         level=3,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     trigger_rule = TriggerRule(
@@ -399,7 +400,7 @@ def test_create_target_artifact_not_auto():
         target_type="rfc",
         auto_create=False,
         required=False,
-        description="ADR level 3+ may need RFC"
+        description="ADR level 3+ may need RFC",
     )
 
     result = service.create_target_artifact(source_artifact, trigger_rule)
@@ -424,7 +425,7 @@ def test_process_artifact_triggers():
         status="accepted",
         level=4,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     # Mock rules
@@ -436,7 +437,7 @@ def test_process_artifact_triggers():
             target_type="governance",
             auto_create=True,
             required=True,
-            description="ADR level 4+ requires governance artifact"
+            description="ADR level 4+ requires governance artifact",
         ),
         TriggerRule(
             id=2,
@@ -445,8 +446,8 @@ def test_process_artifact_triggers():
             target_type="implementation",
             auto_create=True,
             required=False,
-            description="Accepted ADRs may need implementation"
-        )
+            description="Accepted ADRs may need implementation",
+        ),
     ]
 
     # Mock created artifacts
@@ -457,7 +458,7 @@ def test_process_artifact_triggers():
         title="Governance for Test ADR",
         status="proposed",
         content="Auto-generated governance artifact",
-        squad_id=1
+        squad_id=1,
     )
 
     mock_implementation_artifact = Artifact(
@@ -467,16 +468,32 @@ def test_process_artifact_triggers():
         title="Implementation for Test ADR",
         status="proposed",
         content="Auto-generated implementation artifact",
-        squad_id=1
+        squad_id=1,
     )
 
-    with patch.object(service, 'check_triggers_for_artifact', return_value=[
-        {"rule": mock_rules[0], "condition_met": True, "auto_create": True, "required": True},
-        {"rule": mock_rules[1], "condition_met": True, "auto_create": True, "required": False}
-    ]):
-        with patch.object(service, 'create_target_artifact', side_effect=[
-            mock_governance_artifact, mock_implementation_artifact
-        ]):
+    with patch.object(
+        service,
+        "check_triggers_for_artifact",
+        return_value=[
+            {
+                "rule": mock_rules[0],
+                "condition_met": True,
+                "auto_create": True,
+                "required": True,
+            },
+            {
+                "rule": mock_rules[1],
+                "condition_met": True,
+                "auto_create": True,
+                "required": False,
+            },
+        ],
+    ):
+        with patch.object(
+            service,
+            "create_target_artifact",
+            side_effect=[mock_governance_artifact, mock_implementation_artifact],
+        ):
             results = service.process_artifact_triggers(artifact)
 
     assert len(results) == 2
@@ -499,7 +516,7 @@ def test_process_artifact_triggers_no_auto_create():
         status="accepted",
         level=4,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     mock_rules = [
@@ -510,13 +527,22 @@ def test_process_artifact_triggers_no_auto_create():
             target_type="governance",
             auto_create=False,
             required=True,
-            description="ADR level 4+ requires governance artifact"
+            description="ADR level 4+ requires governance artifact",
         )
     ]
 
-    with patch.object(service, 'check_triggers_for_artifact', return_value=[
-        {"rule": mock_rules[0], "condition_met": True, "auto_create": False, "required": True}
-    ]):
+    with patch.object(
+        service,
+        "check_triggers_for_artifact",
+        return_value=[
+            {
+                "rule": mock_rules[0],
+                "condition_met": True,
+                "auto_create": False,
+                "required": True,
+            }
+        ],
+    ):
         results = service.process_artifact_triggers(artifact)
 
     # Should return empty list when no auto_create
@@ -538,7 +564,7 @@ def test_process_artifact_triggers_condition_not_met():
         status="proposed",
         level=2,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     mock_rules = [
@@ -549,11 +575,11 @@ def test_process_artifact_triggers_condition_not_met():
             target_type="governance",
             auto_create=True,
             required=True,
-            description="ADR level 4+ requires governance artifact"
+            description="ADR level 4+ requires governance artifact",
         )
     ]
 
-    with patch.object(service, 'check_triggers_for_artifact', return_value=[]):
+    with patch.object(service, "check_triggers_for_artifact", return_value=[]):
         results = service.process_artifact_triggers(artifact)
 
     assert len(results) == 0
@@ -574,7 +600,7 @@ def test_validate_required_triggers_all_met():
         status="accepted",
         level=4,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     # Mock triggers with one required and met
@@ -587,15 +613,17 @@ def test_validate_required_triggers_all_met():
                 target_type="governance",
                 auto_create=True,
                 required=True,
-                description="ADR level 4+ requires governance artifact"
+                description="ADR level 4+ requires governance artifact",
             ),
             "condition_met": True,
             "auto_create": True,
-            "required": True
+            "required": True,
         }
     ]
 
-    with patch.object(service, 'check_triggers_for_artifact', return_value=mock_triggers):
+    with patch.object(
+        service, "check_triggers_for_artifact", return_value=mock_triggers
+    ):
         # This should not raise an exception
         service.validate_required_triggers(artifact)
 
@@ -615,7 +643,7 @@ def test_validate_required_triggers_not_met():
         status="accepted",
         level=4,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     # Mock triggers with one required but condition not met
@@ -628,15 +656,17 @@ def test_validate_required_triggers_not_met():
                 target_type="governance",
                 auto_create=True,
                 required=True,
-                description="ADR level 5 requires governance artifact"
+                description="ADR level 5 requires governance artifact",
             ),
             "condition_met": False,
             "auto_create": True,
-            "required": True
+            "required": True,
         }
     ]
 
-    with patch.object(service, 'check_triggers_for_artifact', return_value=mock_triggers):
+    with patch.object(
+        service, "check_triggers_for_artifact", return_value=mock_triggers
+    ):
         with pytest.raises(ValueError, match="Required trigger not satisfied"):
             service.validate_required_triggers(artifact)
 
@@ -656,7 +686,7 @@ def test_validate_required_triggers_no_required():
         status="accepted",
         level=4,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     # Mock triggers with none required
@@ -669,15 +699,17 @@ def test_validate_required_triggers_no_required():
                 target_type="governance",
                 auto_create=True,
                 required=False,
-                description="ADR level 4+ suggests governance artifact"
+                description="ADR level 4+ suggests governance artifact",
             ),
             "condition_met": True,
             "auto_create": True,
-            "required": False
+            "required": False,
         }
     ]
 
-    with patch.object(service, 'check_triggers_for_artifact', return_value=mock_triggers):
+    with patch.object(
+        service, "check_triggers_for_artifact", return_value=mock_triggers
+    ):
         # This should not raise an exception even if condition not met
         service.validate_required_triggers(artifact)
 
@@ -697,7 +729,7 @@ def test_get_trigger_suggestions():
         status="accepted",
         level=4,
         content="Test content",
-        squad_id=1
+        squad_id=1,
     )
 
     # Mock rules
@@ -709,7 +741,7 @@ def test_get_trigger_suggestions():
             target_type="governance",
             auto_create=True,
             required=True,
-            description="ADR level 4+ requires governance artifact"
+            description="ADR level 4+ requires governance artifact",
         ),
         TriggerRule(
             id=2,
@@ -718,7 +750,7 @@ def test_get_trigger_suggestions():
             target_type="implementation",
             auto_create=False,
             required=False,
-            description="Accepted ADRs may need implementation artifact"
+            description="Accepted ADRs may need implementation artifact",
         ),
         TriggerRule(
             id=3,
@@ -727,12 +759,14 @@ def test_get_trigger_suggestions():
             target_type="uncommon",
             auto_create=False,
             required=False,
-            description="ADR level 5 may need uncommon artifact"
-        )
+            description="ADR level 5 may need uncommon artifact",
+        ),
     ]
 
-    with patch.object(service, 'get_rules_for_source_type', return_value=mock_rules):
-        with patch.object(service, 'evaluate_condition', side_effect=[True, True, False]):
+    with patch.object(service, "get_rules_for_source_type", return_value=mock_rules):
+        with patch.object(
+            service, "evaluate_condition", side_effect=[True, True, False]
+        ):
             suggestions = service.get_trigger_suggestions(artifact)
 
     assert len(suggestions) == 2

@@ -21,8 +21,8 @@ try:
     # Now test the function directly
     print("\nRunning test_trigger_service_initialization...")
 
-    mock_session = type('MockSession', (), {})()
-    mock_artifact_service = type('MockArtifactService', (), {})()
+    mock_session = type("MockSession", (), {})()
+    mock_artifact_service = type("MockArtifactService", (), {})()
 
     service = TriggerService(mock_session, mock_artifact_service)
 

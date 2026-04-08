@@ -22,6 +22,7 @@ from .artifact_service import ArtifactService
 
 class HealthStatus(str, Enum):
     """Health status enum."""
+
     HEALTHY = "healthy"
     UNHEALTHY = "unhealthy"
 
@@ -70,7 +71,7 @@ class HealthService:
         result = {
             "name": "database",
             "status": status,
-            "response_time_ms": round(response_time_ms, 2)
+            "response_time_ms": round(response_time_ms, 2),
         }
 
         if error:
@@ -87,17 +88,18 @@ class HealthService:
         """
         # Template directory path (relative to project root)
         template_dir = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            "templates"
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "templates"
         )
 
         directory_exists = os.path.exists(template_dir)
 
         result = {
             "name": "templates",
-            "status": HealthStatus.HEALTHY if directory_exists else HealthStatus.UNHEALTHY,
+            "status": (
+                HealthStatus.HEALTHY if directory_exists else HealthStatus.UNHEALTHY
+            ),
             "directory_exists": directory_exists,
-            "directory_path": template_dir
+            "directory_path": template_dir,
         }
 
         if not directory_exists:
@@ -121,7 +123,7 @@ class HealthService:
                 "status": HealthStatus.HEALTHY,
                 "total_count": counts.get("total", 0),
                 "by_type": counts.get("by_type", {}),
-                "by_status": counts.get("by_status", {})
+                "by_status": counts.get("by_status", {}),
             }
 
             # If there was an error in counts, mark as unhealthy
@@ -133,7 +135,7 @@ class HealthService:
             result = {
                 "name": "artifacts",
                 "status": HealthStatus.UNHEALTHY,
-                "error": str(e)
+                "error": str(e),
             }
 
         return result
@@ -150,12 +152,16 @@ class HealthService:
         # Database metrics
         try:
             # Get database size estimate (SQLite specific)
-            result = self.session.execute("SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()")
+            result = self.session.execute(
+                "SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()"
+            )
             db_size_bytes = result.scalar() or 0
 
             metrics["database"] = {
                 "size_bytes": db_size_bytes,
-                "size_mb": round(db_size_bytes / (1024 * 1024), 2) if db_size_bytes > 0 else 0
+                "size_mb": (
+                    round(db_size_bytes / (1024 * 1024), 2) if db_size_bytes > 0 else 0
+                ),
             }
         except Exception:
             metrics["database"] = {"error": "Could not retrieve database metrics"}
@@ -167,13 +173,15 @@ class HealthService:
             # Count artifacts created today
             today = datetime.now().date()
             today_start = datetime.combine(today, datetime.min.time())
-            today_artifacts = len(self.session.exec(
-                select(Artifact).where(Artifact.created_at >= today_start)
-            ).all())
+            today_artifacts = len(
+                self.session.exec(
+                    select(Artifact).where(Artifact.created_at >= today_start)
+                ).all()
+            )
 
             metrics["artifacts"] = {
                 "total": total_artifacts,
-                "created_today": today_artifacts
+                "created_today": today_artifacts,
             }
         except Exception:
             metrics["artifacts"] = {"error": "Could not retrieve artifact metrics"}
@@ -184,8 +192,8 @@ class HealthService:
             # In production, you would use psutil for real metrics
             metrics["system"] = {
                 "memory_usage_mb": 0,  # Placeholder
-                "cpu_percent": 0,      # Placeholder
-                "note": "System metrics require psutil library"
+                "cpu_percent": 0,  # Placeholder
+                "note": "System metrics require psutil library",
             }
         except Exception:
             metrics["system"] = {"error": "Could not retrieve system metrics"}
@@ -203,7 +211,7 @@ class HealthService:
         checks = [
             self.check_database_health(),
             self.check_template_directory(),
-            self.check_artifact_counts()
+            self.check_artifact_counts(),
         ]
 
         # Determine overall status
@@ -213,7 +221,7 @@ class HealthService:
         return {
             "status": overall_status,
             "timestamp": datetime.utcnow().isoformat() + "Z",
-            "components": checks
+            "components": checks,
         }
 
 
@@ -229,8 +237,4 @@ def get_artifact_counts(self) -> Dict[str, Any]:
     from .artifact_service import ArtifactService
 
     # Create a simple implementation for testing
-    return {
-        "total": 0,
-        "by_type": {},
-        "by_status": {}
-    }
+    return {"total": 0, "by_type": {}, "by_status": {}}

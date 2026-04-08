@@ -46,7 +46,9 @@ class ArtifactRouter:
         """
         self.base_path = Path(base_path)
 
-    def get_path(self, artifact_type: Union[ArtifactType, str], artifact_id: str) -> Path:
+    def get_path(
+        self, artifact_type: Union[ArtifactType, str], artifact_id: str
+    ) -> Path:
         """
         Get filesystem path for an artifact.
 
@@ -79,8 +81,9 @@ class ArtifactRouter:
         """
         path.parent.mkdir(parents=True, exist_ok=True)
 
-    def generate_markdown_content(self, artifact_type: Union[ArtifactType, str],
-                                 artifact_data: Dict[str, Any]) -> str:
+    def generate_markdown_content(
+        self, artifact_type: Union[ArtifactType, str], artifact_data: Dict[str, Any]
+    ) -> str:
         """
         Generate markdown content for an artifact.
 
@@ -104,10 +107,16 @@ class ArtifactRouter:
         elif artifact_type_enum == ArtifactType.TECH_DEBT:
             return self._generate_tech_debt_content(artifact_data)
         else:
-            raise ValueError(f"Unsupported artifact type for content generation: {artifact_type}")
+            raise ValueError(
+                f"Unsupported artifact type for content generation: {artifact_type}"
+            )
 
-    def save_artifact(self, artifact_type: Union[ArtifactType, str],
-                     artifact_id: str, artifact_data: Dict[str, Any]) -> Path:
+    def save_artifact(
+        self,
+        artifact_type: Union[ArtifactType, str],
+        artifact_id: str,
+        artifact_data: Dict[str, Any],
+    ) -> Path:
         """
         Save artifact to filesystem.
 
@@ -127,7 +136,9 @@ class ArtifactRouter:
 
         return path
 
-    def _artifact_type_from_string(self, artifact_type: Union[ArtifactType, str]) -> ArtifactType:
+    def _artifact_type_from_string(
+        self, artifact_type: Union[ArtifactType, str]
+    ) -> ArtifactType:
         """
         Convert string to ArtifactType enum.
 
@@ -159,26 +170,31 @@ class ArtifactRouter:
             "",
             "## Context",
             "",
-            adr_data.get('content', 'No content provided.'),
+            adr_data.get("content", "No content provided."),
             "",
             "## Decision",
             "",
-            adr_data.get('decision', 'Decision not documented.'),
+            adr_data.get("decision", "Decision not documented."),
             "",
             "## Consequences",
             "",
-            adr_data.get('consequences', 'Consequences not documented.'),
+            adr_data.get("consequences", "Consequences not documented."),
         ]
 
         # Add optional fields if present
-        if adr_data.get('tco_estimate'):
+        if adr_data.get("tco_estimate"):
             lines.extend(["", f"**TCO Estimate**: {adr_data['tco_estimate']}"])
 
-        if adr_data.get('lgpd_analysis'):
+        if adr_data.get("lgpd_analysis"):
             lines.extend(["", f"**LGPD Analysis**: {adr_data['lgpd_analysis']}"])
 
-        if adr_data.get('health_compliance_impact'):
-            lines.extend(["", f"**Health Compliance Impact**: {adr_data['health_compliance_impact']}"])
+        if adr_data.get("health_compliance_impact"):
+            lines.extend(
+                [
+                    "",
+                    f"**Health Compliance Impact**: {adr_data['health_compliance_impact']}",
+                ]
+            )
 
         return "\n".join(lines)
 
@@ -192,32 +208,34 @@ class ArtifactRouter:
             "",
             "## Description",
             "",
-            rfc_data.get('description', 'No description provided.'),
+            rfc_data.get("description", "No description provided."),
             "",
             "## Motivation",
             "",
-            rfc_data.get('motivation', 'Motivation not documented.'),
+            rfc_data.get("motivation", "Motivation not documented."),
             "",
             "## Proposed Solution",
             "",
-            rfc_data.get('proposed_solution', 'Proposed solution not documented.'),
+            rfc_data.get("proposed_solution", "Proposed solution not documented."),
             "",
             "## Alternatives Considered",
             "",
-            rfc_data.get('alternatives', 'Alternatives not documented.'),
+            rfc_data.get("alternatives", "Alternatives not documented."),
         ]
 
         # Add circuit breaker info if present
-        if rfc_data.get('circuit_breaker_enabled'):
-            lines.extend([
-                "",
-                "## Circuit Breaker Configuration",
-                "",
-                f"- **Enabled**: Yes",
-                f"- **Max Retries**: {rfc_data.get('max_retries', 3)}",
-                f"- **Retry Delay**: {rfc_data.get('retry_delay_seconds', 1.0)} seconds",
-                f"- **Circuit Open Time**: {rfc_data.get('circuit_open_seconds', 30.0)} seconds",
-            ])
+        if rfc_data.get("circuit_breaker_enabled"):
+            lines.extend(
+                [
+                    "",
+                    "## Circuit Breaker Configuration",
+                    "",
+                    f"- **Enabled**: Yes",
+                    f"- **Max Retries**: {rfc_data.get('max_retries', 3)}",
+                    f"- **Retry Delay**: {rfc_data.get('retry_delay_seconds', 1.0)} seconds",
+                    f"- **Circuit Open Time**: {rfc_data.get('circuit_open_seconds', 30.0)} seconds",
+                ]
+            )
 
         return "\n".join(lines)
 
@@ -231,15 +249,15 @@ class ArtifactRouter:
             "",
             "## Description",
             "",
-            model_data.get('description', 'No description provided.'),
+            model_data.get("description", "No description provided."),
             "",
             "## Components",
             "",
-            model_data.get('components', 'Components not documented.'),
+            model_data.get("components", "Components not documented."),
             "",
             "## Relationships",
             "",
-            model_data.get('relationships', 'Relationships not documented.'),
+            model_data.get("relationships", "Relationships not documented."),
         ]
 
         return "\n".join(lines)
@@ -254,14 +272,14 @@ class ArtifactRouter:
             "",
             "## Description",
             "",
-            checklist_data.get('description', 'No description provided.'),
+            checklist_data.get("description", "No description provided."),
             "",
             "## Items",
             "",
         ]
 
         # Add checklist items
-        items = checklist_data.get('items', [])
+        items = checklist_data.get("items", [])
         if items:
             for i, item in enumerate(items, 1):
                 lines.append(f"{i}. [ ] {item}")
@@ -282,19 +300,19 @@ class ArtifactRouter:
             "",
             "## Description",
             "",
-            debt_data.get('description', 'No description provided.'),
+            debt_data.get("description", "No description provided."),
             "",
             "## Impact",
             "",
-            debt_data.get('impact', 'Impact not documented.'),
+            debt_data.get("impact", "Impact not documented."),
             "",
             "## Proposed Fix",
             "",
-            debt_data.get('proposed_fix', 'Proposed fix not documented.'),
+            debt_data.get("proposed_fix", "Proposed fix not documented."),
             "",
             "## Notes",
             "",
-            debt_data.get('notes', 'No additional notes.'),
+            debt_data.get("notes", "No additional notes."),
         ]
 
         return "\n".join(lines)

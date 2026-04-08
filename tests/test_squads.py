@@ -39,7 +39,7 @@ def test_create_squad_invalid_code(client):
         "squad_code": "ab",  # Too short (less than 3 characters)
         "name": "AI Engineering Squad",
         "tech_lead": "Carlos Mendes",
-        "status": "active"
+        "status": "active",
     }
 
     response = client.post("/api/squads/", json=invalid_data)
@@ -79,7 +79,7 @@ def test_list_squads_filter_by_status(client):
         "squad_code": "active-squad",
         "name": "Active Squad",
         "tech_lead": "Tech Lead 1",
-        "status": "active"
+        "status": "active",
     }
     client.post("/api/squads/", json=active_squad)
 
@@ -89,7 +89,7 @@ def test_list_squads_filter_by_status(client):
         "name": "Discontinued Squad",
         "tech_lead": "Tech Lead 2",
         "status": "discontinued",
-        "discontinued_reason": "Project completed"
+        "discontinued_reason": "Project completed",
     }
     client.post("/api/squads/", json=discontinued_squad)
 
@@ -134,12 +134,11 @@ def test_update_squad(client, test_squad_data):
     # Update squad
     update_data = {
         "name": "Updated AI Engineering Squad",
-        "tech_lead": "Updated Tech Lead"
+        "tech_lead": "Updated Tech Lead",
     }
 
     response = client.patch(
-        f"/api/squads/{test_squad_data['squad_code']}",
-        json=update_data
+        f"/api/squads/{test_squad_data['squad_code']}", json=update_data
     )
     assert response.status_code == 200
 
@@ -158,8 +157,7 @@ def test_update_squad_status_to_discontinued(client, test_squad_data):
     # Try to update to discontinued without reason
     update_data = {"status": "discontinued"}
     response = client.patch(
-        f"/api/squads/{test_squad_data['squad_code']}",
-        json=update_data
+        f"/api/squads/{test_squad_data['squad_code']}", json=update_data
     )
     assert response.status_code == 400  # Service validation returns 400
     assert "discontinued_reason" in response.json()["detail"].lower()
@@ -167,8 +165,7 @@ def test_update_squad_status_to_discontinued(client, test_squad_data):
     # Update with reason
     update_data["discontinued_reason"] = "Project completed"
     response = client.patch(
-        f"/api/squads/{test_squad_data['squad_code']}",
-        json=update_data
+        f"/api/squads/{test_squad_data['squad_code']}", json=update_data
     )
     assert response.status_code == 200
     assert response.json()["status"] == "discontinued"

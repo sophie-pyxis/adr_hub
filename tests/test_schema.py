@@ -1,6 +1,7 @@
 """
 Test database schema for unified artifact model.
 """
+
 import pytest
 from sqlmodel import Session, select
 from datetime import datetime
@@ -18,7 +19,7 @@ def test_artifact_creation_valid(session: Session):
         squad_code="test-squad",
         name="Test Squad",
         tech_lead="Test Lead",
-        status="active"
+        status="active",
     )
     session.add(squad)
     session.commit()
@@ -32,7 +33,7 @@ def test_artifact_creation_valid(session: Session):
         level=1,
         status="proposed",
         content="Test content",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     session.add(artifact)
     session.commit()
@@ -54,7 +55,7 @@ def test_auto_number_adr_level1(session: Session):
         squad_code="test-squad",
         name="Test Squad",
         tech_lead="Test Lead",
-        status="active"
+        status="active",
     )
     session.add(squad)
     session.commit()
@@ -68,7 +69,7 @@ def test_auto_number_adr_level1(session: Session):
         level=1,
         status="proposed",
         content="Test content",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     session.add(artifact)
     session.commit()
@@ -86,7 +87,7 @@ def test_auto_number_adr_level3(session: Session):
         squad_code="test-squad",
         name="Test Squad",
         tech_lead="Test Lead",
-        status="active"
+        status="active",
     )
     session.add(squad)
     session.commit()
@@ -101,7 +102,7 @@ def test_auto_number_adr_level3(session: Session):
         status="proposed",
         content="Test content",
         rfc_status="RFC-2024-001 completed",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     session.add(artifact)
     session.commit()
@@ -119,7 +120,7 @@ def test_auto_number_rfc(session: Session):
         squad_code="test-squad",
         name="Test Squad",
         tech_lead="Test Lead",
-        status="active"
+        status="active",
     )
     session.add(squad)
     session.commit()
@@ -132,7 +133,7 @@ def test_auto_number_rfc(session: Session):
         title="Test RFC",
         status="proposed",
         content="Test RFC content",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     session.add(artifact)
     session.commit()
@@ -150,7 +151,7 @@ def test_artifact_number_immutable(session: Session):
         squad_code="test-squad",
         name="Test Squad",
         tech_lead="Test Lead",
-        status="active"
+        status="active",
     )
     session.add(squad)
     session.commit()
@@ -164,7 +165,7 @@ def test_artifact_number_immutable(session: Session):
         level=1,
         status="proposed",
         content="Test content",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     session.add(artifact)
     session.commit()
@@ -183,7 +184,7 @@ def test_self_referential_triggered_by(session: Session):
         squad_code="test-squad",
         name="Test Squad",
         tech_lead="Test Lead",
-        status="active"
+        status="active",
     )
     session.add(squad)
     session.commit()
@@ -197,7 +198,7 @@ def test_self_referential_triggered_by(session: Session):
         level=1,
         status="proposed",
         content="Test content",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     session.add(artifact1)
     session.commit()
@@ -212,7 +213,7 @@ def test_self_referential_triggered_by(session: Session):
         content="Test RFC content",
         squad_id=squad.id,
         triggered_by_id=artifact1.id,
-        trigger_reason="Triggered by ADR level 3+ requirement"
+        trigger_reason="Triggered by ADR level 3+ requirement",
     )
     session.add(artifact2)
     session.commit()
@@ -231,7 +232,7 @@ def test_trigger_rule_creation(session: Session):
         target_type="rfc",
         auto_create=False,
         required=True,
-        description="ADR level 3+ requires RFC"
+        description="ADR level 3+ requires RFC",
     )
     session.add(trigger_rule)
     session.commit()
@@ -253,7 +254,7 @@ def test_artifact_reference_creation(session: Session):
         squad_code="test-squad",
         name="Test Squad",
         tech_lead="Test Lead",
-        status="active"
+        status="active",
     )
     session.add(squad)
     session.commit()
@@ -267,7 +268,7 @@ def test_artifact_reference_creation(session: Session):
         level=1,
         status="proposed",
         content="Test content",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     artifact2 = Artifact(
         artifact_type="rfc",
@@ -275,7 +276,7 @@ def test_artifact_reference_creation(session: Session):
         title="Test RFC",
         status="proposed",
         content="Test RFC content",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     session.add_all([artifact1, artifact2])
     session.commit()
@@ -286,7 +287,7 @@ def test_artifact_reference_creation(session: Session):
     reference = ArtifactReference(
         from_artifact_id=artifact1.id,
         to_artifact_id=artifact2.id,
-        reference_type="triggers"
+        reference_type="triggers",
     )
     session.add(reference)
     session.commit()
@@ -305,7 +306,7 @@ def test_type_validation(session: Session):
         squad_code="test-squad",
         name="Test Squad",
         tech_lead="Test Lead",
-        status="active"
+        status="active",
     )
     session.add(squad)
     session.commit()
@@ -320,13 +321,21 @@ def test_type_validation(session: Session):
             level=1,
             status="proposed",
             content="Test content",
-            squad_id=squad.id
+            squad_id=squad.id,
         )
 
     assert "artifact_type must be one of:" in str(exc_info.value)
 
     # Test valid artifact types should succeed
-    valid_types = ["adr", "rfc", "evidence", "governance", "implementation", "visibility", "uncommon"]
+    valid_types = [
+        "adr",
+        "rfc",
+        "evidence",
+        "governance",
+        "implementation",
+        "visibility",
+        "uncommon",
+    ]
     for artifact_type in valid_types:
         # Use appropriate number format for each type
         if artifact_type == "adr":
@@ -352,7 +361,7 @@ def test_type_validation(session: Session):
             level=1 if artifact_type == "adr" else None,
             status="proposed",
             content="Test content",
-            squad_id=squad.id
+            squad_id=squad.id,
         )
         # Should not raise any error
         assert artifact.artifact_type == artifact_type
@@ -365,7 +374,7 @@ def test_level_required_for_adr(session: Session):
         squad_code="test-squad",
         name="Test Squad",
         tech_lead="Test Lead",
-        status="active"
+        status="active",
     )
     session.add(squad)
     session.commit()
@@ -380,7 +389,7 @@ def test_level_required_for_adr(session: Session):
             level=None,
             status="proposed",
             content="Test content",
-            squad_id=squad.id
+            squad_id=squad.id,
         )
 
     assert "level is required for ADR artifacts" in str(exc_info.value)
@@ -393,7 +402,7 @@ def test_level_required_for_adr(session: Session):
         level=1,
         status="proposed",
         content="Test content",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     assert artifact.level == 1
 
@@ -406,7 +415,7 @@ def test_level_required_for_adr(session: Session):
             level=1,  # level should not be allowed for RFC
             status="proposed",
             content="Test content",
-            squad_id=squad.id
+            squad_id=squad.id,
         )
 
     assert "level can only be set for artifact_type='adr'" in str(exc_info.value)
@@ -419,7 +428,7 @@ def test_level_required_for_adr(session: Session):
         level=None,  # Should be allowed
         status="proposed",
         content="Test content",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     assert artifact.level is None
 
@@ -431,7 +440,7 @@ def test_status_valid_values(session: Session):
         squad_code="test-squad",
         name="Test Squad",
         tech_lead="Test Lead",
-        status="active"
+        status="active",
     )
     session.add(squad)
     session.commit()
@@ -446,13 +455,20 @@ def test_status_valid_values(session: Session):
             level=1,
             status="invalid_status",
             content="Test content",
-            squad_id=squad.id
+            squad_id=squad.id,
         )
 
     assert "status must be one of:" in str(exc_info.value)
 
     # Test all valid statuses succeed
-    valid_statuses = ["proposed", "accepted", "rejected", "reopened", "superseded", "discontinued"]
+    valid_statuses = [
+        "proposed",
+        "accepted",
+        "rejected",
+        "reopened",
+        "superseded",
+        "discontinued",
+    ]
     for status in valid_statuses:
         # Use Artifact for database operations
         artifact = Artifact(
@@ -462,7 +478,7 @@ def test_status_valid_values(session: Session):
             level=1,
             status=status,
             content="Test content",
-            squad_id=squad.id
+            squad_id=squad.id,
         )
         assert artifact.status == status
 
@@ -474,7 +490,7 @@ def test_unique_number_constraint(session: Session):
         squad_code="test-squad",
         name="Test Squad",
         tech_lead="Test Lead",
-        status="active"
+        status="active",
     )
     session.add(squad)
     session.commit()
@@ -488,7 +504,7 @@ def test_unique_number_constraint(session: Session):
         level=1,
         status="proposed",
         content="Test content",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     session.add(artifact1)
     session.commit()
@@ -501,12 +517,13 @@ def test_unique_number_constraint(session: Session):
         title="Test RFC",
         status="proposed",
         content="Test RFC content",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     session.add(artifact2)
 
     # This should raise an integrity error when committing
     import sqlalchemy
+
     with pytest.raises(sqlalchemy.exc.IntegrityError) as exc_info:
         session.commit()
 
@@ -521,7 +538,7 @@ def test_unique_number_constraint(session: Session):
         level=2,
         status="proposed",
         content="Test content 2",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     session.add(artifact3)
 
@@ -539,7 +556,7 @@ def test_unique_number_constraint(session: Session):
         level=1,
         status="proposed",
         content="Test content 3",
-        squad_id=squad.id
+        squad_id=squad.id,
     )
     session.add(artifact4)
     session.commit()  # Should succeed

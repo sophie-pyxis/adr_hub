@@ -6,6 +6,7 @@ PHASE 2: Template Service
 - Template placeholder substitution system
 - Template validation and schema matching
 """
+
 import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
@@ -32,8 +33,15 @@ def test_get_template_path_valid():
     service = TemplateService()
 
     # Test for each artifact type
-    artifact_types = ["adr", "rfc", "evidence", "governance",
-                     "implementation", "visibility", "uncommon"]
+    artifact_types = [
+        "adr",
+        "rfc",
+        "evidence",
+        "governance",
+        "implementation",
+        "visibility",
+        "uncommon",
+    ]
 
     for artifact_type in artifact_types:
         template_path = service.get_template_path(artifact_type)
@@ -151,7 +159,9 @@ def test_validate_template_schema_invalid_placeholder():
     # Template with invalid placeholder (missing closing braces)
     template_content = "# {{title}\n{{content"
 
-    with pytest.raises(TemplateValidationError, match="Unmatched opening braces starting at position"):
+    with pytest.raises(
+        TemplateValidationError, match="Unmatched opening braces starting at position"
+    ):
         service.validate_template_schema(template_content)
 
 
@@ -162,7 +172,9 @@ def test_validate_template_schema_nested_placeholder():
     # Template with nested placeholder (invalid)
     template_content = "# {{title {{nested}} }}"
 
-    with pytest.raises(TemplateValidationError, match="Nested placeholders not allowed"):
+    with pytest.raises(
+        TemplateValidationError, match="Nested placeholders not allowed"
+    ):
         service.validate_template_schema(template_content)
 
 
@@ -180,7 +192,13 @@ def test_extract_placeholders():
 
     placeholders = service.extract_placeholders(template_content)
 
-    assert set(placeholders) == {"title", "status", "created_at", "content", "optional_field"}
+    assert set(placeholders) == {
+        "title",
+        "status",
+        "created_at",
+        "content",
+        "optional_field",
+    }
     assert len(placeholders) == 5
 
 
@@ -212,7 +230,7 @@ def test_apply_template_valid():
         "title": "Test ADR",
         "status": "proposed",
         "created_at": "2024-01-01T00:00:00",
-        "content": "This is the content."
+        "content": "This is the content.",
     }
 
     result = service.apply_template(template_content, data)
@@ -251,7 +269,7 @@ def test_apply_template_extra_data():
     data = {
         "title": "Test",
         "content": "Content",
-        "extra_field": "This should be ignored"
+        "extra_field": "This should be ignored",
     }
 
     result = service.apply_template(template_content, data)
@@ -272,7 +290,7 @@ def test_apply_template_with_defaults():
 
     data = {
         "title": "Test",
-        "content": "Content"
+        "content": "Content",
         # status not provided, should use default
     }
 
@@ -292,7 +310,7 @@ def test_apply_template_with_defaults_override():
     data = {
         "title": "Test",
         "content": "Content",
-        "status": "accepted"  # Override default
+        "status": "accepted",  # Override default
     }
 
     result = service.apply_template(template_content, data)
@@ -317,7 +335,7 @@ def test_generate_content_from_template(tmp_path):
     data = {
         "title": "Test Artifact",
         "artifact_type": "adr",
-        "content": "Test content."
+        "content": "Test content.",
     }
 
     result = service.generate_content_from_template("adr", data)
@@ -339,7 +357,7 @@ def test_generate_content_for_artifact_create():
 **Status**: {{status}}
 {{content}}"""
 
-    with patch.object(service, 'load_template_content', return_value=template_content):
+    with patch.object(service, "load_template_content", return_value=template_content):
         artifact_data = ArtifactCreate(
             artifact_type="adr",
             artifact_number="ADR-001-001",
@@ -347,7 +365,7 @@ def test_generate_content_for_artifact_create():
             status="proposed",
             content="Test content",
             squad_id=1,
-            level=1  # Required for ADR artifacts
+            level=1,  # Required for ADR artifacts
         )
 
         # Convert model to dict for template
@@ -374,9 +392,13 @@ def test_create_missing_templates(tmp_path):
 
     # Should create templates for all artifact types
     expected_templates = [
-        "adr_template.md", "rfc_template.md", "evidence_template.md",
-        "governance_template.md", "implementation_template.md",
-        "visibility_template.md", "uncommon_template.md"
+        "adr_template.md",
+        "rfc_template.md",
+        "evidence_template.md",
+        "governance_template.md",
+        "implementation_template.md",
+        "visibility_template.md",
+        "uncommon_template.md",
     ]
 
     assert len(created) == len(expected_templates)
@@ -391,8 +413,12 @@ def test_create_missing_templates(tmp_path):
         # Check for key elements in template
         assert "{{" in content  # Should have placeholders
         assert "}}" in content
-        assert "title" in content or "Title" in content  # Should have title placeholder or heading
-        assert "content" in content or "Content" in content  # Should have content placeholder or section
+        assert (
+            "title" in content or "Title" in content
+        )  # Should have title placeholder or heading
+        assert (
+            "content" in content or "Content" in content
+        )  # Should have content placeholder or section
 
 
 def test_validate_artifact_against_template_valid():
@@ -404,13 +430,9 @@ def test_validate_artifact_against_template_valid():
 {{content}}
 **Status**: {{status}}"""
 
-    with patch.object(service, 'load_template_content', return_value=template_content):
+    with patch.object(service, "load_template_content", return_value=template_content):
         # Valid data with all required placeholders
-        data = {
-            "title": "Test",
-            "content": "Content",
-            "status": "proposed"
-        }
+        data = {"title": "Test", "content": "Content", "status": "proposed"}
 
         # Should not raise exception
         service.validate_artifact_against_template("adr", data)
@@ -424,12 +446,9 @@ def test_validate_artifact_against_template_missing_field():
 {{content}}
 **Status**: {{status}}"""
 
-    with patch.object(service, 'load_template_content', return_value=template_content):
+    with patch.object(service, "load_template_content", return_value=template_content):
         # Missing "content" field
-        data = {
-            "title": "Test",
-            "status": "proposed"
-        }
+        data = {"title": "Test", "status": "proposed"}
 
         with pytest.raises(ValueError, match="Missing required fields for template"):
             service.validate_artifact_against_template("adr", data)
@@ -444,7 +463,7 @@ def test_get_template_schema():
 **Status**: {{status|proposed}}
 {{optional_field}}"""
 
-    with patch.object(service, 'load_template_content', return_value=template_content):
+    with patch.object(service, "load_template_content", return_value=template_content):
         schema = service.get_template_schema("adr")
 
         # Should include required placeholders (without defaults)
@@ -454,7 +473,12 @@ def test_get_template_schema():
         assert "status" not in schema["required"]  # Has default
 
         # Should include all placeholders
-        assert set(schema["all_placeholders"]) == {"title", "content", "status", "optional_field"}
+        assert set(schema["all_placeholders"]) == {
+            "title",
+            "content",
+            "status",
+            "optional_field",
+        }
 
         # Should include defaults
         assert schema["defaults"]["status"] == "proposed"

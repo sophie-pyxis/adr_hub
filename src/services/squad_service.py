@@ -29,6 +29,7 @@ class SquadService:
         # Note: In production, this would use dependency injection
         # For now, we create a new session
         from ..database.engine import get_engine
+
         engine = get_engine(testing=False)
         return Session(engine)
 
@@ -49,7 +50,9 @@ class SquadService:
             select(Squad).where(Squad.squad_code == squad_create.squad_code)
         ).first()
         if existing:
-            raise ValueError(f"Squad with code '{squad_create.squad_code}' already exists")
+            raise ValueError(
+                f"Squad with code '{squad_create.squad_code}' already exists"
+            )
 
         # Create squad
         squad = Squad(**squad_create.model_dump())
@@ -81,10 +84,7 @@ class SquadService:
         return SquadRead.model_validate(squad)
 
     def list_squads(
-        self,
-        status: Optional[str] = None,
-        skip: int = 0,
-        limit: int = 100
+        self, status: Optional[str] = None, skip: int = 0, limit: int = 100
     ) -> List[SquadRead]:
         """
         List squads with optional filtering.
@@ -113,9 +113,7 @@ class SquadService:
         return [SquadRead.model_validate(squad) for squad in squads]
 
     def update_squad(
-        self,
-        squad_code: str,
-        squad_update: SquadUpdate
+        self, squad_code: str, squad_update: SquadUpdate
     ) -> Optional[SquadRead]:
         """
         Update a squad.
@@ -147,8 +145,13 @@ class SquadService:
         # If status changed to discontinued, ensure reason is set
         if squad_update.status == "discontinued":
             # Check if reason is provided in update or already exists
-            if "discontinued_reason" not in update_data and not squad.discontinued_reason:
-                raise ValueError("discontinued_reason is required when status=discontinued")
+            if (
+                "discontinued_reason" not in update_data
+                and not squad.discontinued_reason
+            ):
+                raise ValueError(
+                    "discontinued_reason is required when status=discontinued"
+                )
 
         session.add(squad)
         session.commit()
@@ -156,7 +159,9 @@ class SquadService:
 
         return SquadRead.model_validate(squad)
 
-    def delete_squad(self, squad_code: str, reason: str = "Discontinued by user") -> bool:
+    def delete_squad(
+        self, squad_code: str, reason: str = "Discontinued by user"
+    ) -> bool:
         """
         Soft delete a squad (mark as discontinued).
 

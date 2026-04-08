@@ -6,6 +6,7 @@ PHASE 2: Template Service
 - Template placeholder substitution system with Jinja2-like syntax
 - Template validation and schema matching
 """
+
 import re
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Set
@@ -14,6 +15,7 @@ import datetime
 
 class TemplateValidationError(Exception):
     """Exception raised for template validation errors."""
+
     pass
 
 
@@ -28,7 +30,7 @@ class TemplateService:
         "governance": "governance_template.md",
         "implementation": "implementation_template.md",
         "visibility": "visibility_template.md",
-        "uncommon": "uncommon_template.md"
+        "uncommon": "uncommon_template.md",
     }
 
     # Default template directory
@@ -158,12 +160,11 @@ class TemplateService:
             close_pos = close_positions[i]
 
             # Extract placeholder
-            placeholder = template_content[open_pos:close_pos + 2]  # +2 for }}
+            placeholder = template_content[open_pos : close_pos + 2]  # +2 for }}
 
             # Check for nested placeholders within this placeholder
             # Count how many {{ are between open_pos and close_pos
-            inner_open = sum(1 for pos in open_positions
-                           if open_pos < pos < close_pos)
+            inner_open = sum(1 for pos in open_positions if open_pos < pos < close_pos)
             if inner_open > 0:
                 raise TemplateValidationError(
                     f"Nested placeholders not allowed: {placeholder}"
@@ -179,9 +180,7 @@ class TemplateService:
             content = placeholder[2:-2].strip()
 
             if not content:
-                raise TemplateValidationError(
-                    f"Empty placeholder: {placeholder}"
-                )
+                raise TemplateValidationError(f"Empty placeholder: {placeholder}")
 
             # Check for invalid characters
             if re.search(r"[^\w\-_|]", content):
@@ -267,7 +266,7 @@ class TemplateService:
 
             placeholders_with_defaults[full_placeholder] = {
                 "name": placeholder_name,
-                "default": default_value
+                "default": default_value,
             }
 
         # Replace placeholders
@@ -334,9 +333,7 @@ class TemplateService:
         if "created_at" not in data:
             data["created_at"] = datetime.datetime.now().isoformat()
 
-        return self.generate_content_from_template(
-            data["artifact_type"], data
-        )
+        return self.generate_content_from_template(data["artifact_type"], data)
 
     def create_missing_templates(self) -> Dict[str, Path]:
         """
@@ -386,7 +383,6 @@ class TemplateService:
 
 ## Consequences
 [Consequences go here]""",
-
             "rfc": """# {{title}}
 
 **Artifact Number**: {{artifact_number}}
@@ -405,7 +401,6 @@ class TemplateService:
 
 ## Alternatives Considered
 [Alternative approaches considered]""",
-
             "evidence": """# {{title}}
 
 **Artifact Number**: {{artifact_number}}
@@ -424,7 +419,6 @@ class TemplateService:
 
 ## Implications
 [Implications for decision-making]""",
-
             "governance": """# {{title}}
 
 **Artifact Number**: {{artifact_number}}
@@ -443,7 +437,6 @@ class TemplateService:
 
 ## Monitoring
 [Monitoring and enforcement mechanisms]""",
-
             "implementation": """# {{title}}
 
 **Artifact Number**: {{artifact_number}}
@@ -462,7 +455,6 @@ class TemplateService:
 
 ## Rollout Plan
 [Rollout and deployment plan]""",
-
             "visibility": """# {{title}}
 
 **Artifact Number**: {{artifact_number}}
@@ -481,7 +473,6 @@ class TemplateService:
 
 ## Feedback Mechanisms
 [Feedback collection methods]""",
-
             "uncommon": """# {{title}}
 
 **Artifact Number**: {{artifact_number}}
@@ -499,7 +490,7 @@ class TemplateService:
 [Justification for uncommon approach]
 
 ## Risk Assessment
-[Risk assessment and mitigation]"""
+[Risk assessment and mitigation]""",
         }
 
         return templates.get(artifact_type, f"# {{title}}\n\n{{content}}")
@@ -558,7 +549,7 @@ class TemplateService:
         schema = {
             "required": [],
             "defaults": {},
-            "all_placeholders": list(placeholders)
+            "all_placeholders": list(placeholders),
         }
 
         # Check each placeholder for defaults

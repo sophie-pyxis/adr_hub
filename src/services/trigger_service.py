@@ -7,6 +7,7 @@ PHASE 4: Trigger Service
 - Integration with artifact service
 - Safe evaluation of condition expressions
 """
+
 import ast
 import operator
 import re
@@ -20,6 +21,7 @@ from ..services.artifact_service import ArtifactService
 
 class TriggerEvaluationError(Exception):
     """Exception raised for trigger evaluation errors."""
+
     pass
 
 
@@ -52,7 +54,11 @@ class TriggerService:
 
         # Whitelist of allowed attributes
         self.allowed_attributes = {
-            "level", "status", "artifact_type", "title", "content"
+            "level",
+            "status",
+            "artifact_type",
+            "title",
+            "content",
         }
 
     def get_rules_for_source_type(self, source_type: str) -> List[TriggerRule]:
@@ -88,7 +94,7 @@ class TriggerService:
 
         try:
             # Parse the condition into AST
-            tree = ast.parse(condition, mode='eval')
+            tree = ast.parse(condition, mode="eval")
 
             # Validate the AST for safety
             self._validate_ast(tree.body)
@@ -129,7 +135,9 @@ class TriggerService:
 
             # Validate comparators and ops
             for op in node.ops:
-                if not any(isinstance(op, op_type) for op_type in self.safe_operators.keys()):
+                if not any(
+                    isinstance(op, op_type) for op_type in self.safe_operators.keys()
+                ):
                     raise TriggerEvaluationError(f"Unsafe operator: {op}")
 
             for comparator in node.comparators:
@@ -158,12 +166,16 @@ class TriggerService:
         elif isinstance(node, ast.Constant):
             # Allow constants (strings, numbers, booleans, None)
             if not isinstance(node.value, (str, int, float, bool, type(None))):
-                raise TriggerEvaluationError(f"Unsafe constant type: {type(node.value)}")
+                raise TriggerEvaluationError(
+                    f"Unsafe constant type: {type(node.value)}"
+                )
 
         elif isinstance(node, ast.Attribute):
             # Only allow attributes on 'artifact' object
-            if not isinstance(node.value, ast.Name) or node.value.id != 'artifact':
-                raise TriggerEvaluationError("Only attributes on 'artifact' object are allowed")
+            if not isinstance(node.value, ast.Name) or node.value.id != "artifact":
+                raise TriggerEvaluationError(
+                    "Only attributes on 'artifact' object are allowed"
+                )
 
             if node.attr not in self.allowed_attributes:
                 raise TriggerEvaluationError(f"Disallowed attribute: {node.attr}")
@@ -285,16 +297,20 @@ class TriggerService:
         for rule in rules:
             condition_met = self.evaluate_condition(artifact, rule.source_condition)
 
-            triggers.append({
-                "rule": rule,
-                "condition_met": condition_met,
-                "auto_create": rule.auto_create,
-                "required": rule.required
-            })
+            triggers.append(
+                {
+                    "rule": rule,
+                    "condition_met": condition_met,
+                    "auto_create": rule.auto_create,
+                    "required": rule.required,
+                }
+            )
 
         return triggers
 
-    def create_target_artifact(self, source_artifact: Artifact, trigger_rule: TriggerRule) -> Optional[Artifact]:
+    def create_target_artifact(
+        self, source_artifact: Artifact, trigger_rule: TriggerRule
+    ) -> Optional[Artifact]:
         """
         Create target artifact based on trigger rule.
 
@@ -317,7 +333,7 @@ class TriggerService:
             content=f"Auto-generated {trigger_rule.target_type} artifact triggered by {source_artifact.artifact_type} '{source_artifact.title}'",
             squad_id=source_artifact.squad_id,
             triggered_by_id=source_artifact.id,
-            trigger_reason=f"Auto-created by trigger rule: {trigger_rule.description}"
+            trigger_reason=f"Auto-created by trigger rule: {trigger_rule.description}",
         )
 
         # Use artifact service to create the artifact

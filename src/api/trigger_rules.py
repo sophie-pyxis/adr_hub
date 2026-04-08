@@ -11,7 +11,12 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from sqlmodel import Session, select
 
-from ..models.trigger_rule import TriggerRule, TriggerRuleCreate, TriggerRuleRead, TriggerRuleUpdate
+from ..models.trigger_rule import (
+    TriggerRule,
+    TriggerRuleCreate,
+    TriggerRuleRead,
+    TriggerRuleUpdate,
+)
 from ..models.artifact import Artifact
 from ..services.trigger_service import TriggerService
 from ..services.artifact_service import ArtifactService
@@ -27,7 +32,7 @@ def get_artifact_service(session: Session = Depends(get_session)) -> ArtifactSer
 
 def get_trigger_service(
     session: Session = Depends(get_session),
-    artifact_service: ArtifactService = Depends(get_artifact_service)
+    artifact_service: ArtifactService = Depends(get_artifact_service),
 ) -> TriggerService:
     """Dependency injection for TriggerService."""
     return TriggerService(session, artifact_service)
@@ -35,9 +40,13 @@ def get_trigger_service(
 
 @router.get("/", response_model=List[TriggerRuleRead])
 def get_trigger_rules(
-    source_type: Optional[str] = Query(None, description="Filter by source artifact type"),
-    target_type: Optional[str] = Query(None, description="Filter by target artifact type"),
-    trigger_service: TriggerService = Depends(get_trigger_service)
+    source_type: Optional[str] = Query(
+        None, description="Filter by source artifact type"
+    ),
+    target_type: Optional[str] = Query(
+        None, description="Filter by target artifact type"
+    ),
+    trigger_service: TriggerService = Depends(get_trigger_service),
 ):
     """
     Get all trigger rules with optional filtering.
@@ -62,14 +71,14 @@ def get_trigger_rules(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error getting trigger rules: {str(e)}"
+            detail=f"Error getting trigger rules: {str(e)}",
         )
 
 
 @router.post("/", response_model=TriggerRuleRead, status_code=status.HTTP_201_CREATED)
 def create_trigger_rule(
     rule_data: TriggerRuleCreate,
-    trigger_service: TriggerService = Depends(get_trigger_service)
+    trigger_service: TriggerService = Depends(get_trigger_service),
 ):
     """
     Create a new trigger rule.
@@ -96,14 +105,13 @@ def create_trigger_rule(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error: {str(e)}"
+            detail=f"Internal server error: {str(e)}",
         )
 
 
 @router.get("/{rule_id}", response_model=TriggerRuleRead)
 def get_trigger_rule(
-    rule_id: int,
-    trigger_service: TriggerService = Depends(get_trigger_service)
+    rule_id: int, trigger_service: TriggerService = Depends(get_trigger_service)
 ):
     """
     Get trigger rule by ID.
@@ -115,7 +123,7 @@ def get_trigger_rule(
         if not rule:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Trigger rule with ID {rule_id} not found"
+                detail=f"Trigger rule with ID {rule_id} not found",
             )
 
         return TriggerRuleRead.model_validate(rule)
@@ -125,7 +133,7 @@ def get_trigger_rule(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error getting trigger rule: {str(e)}"
+            detail=f"Error getting trigger rule: {str(e)}",
         )
 
 
@@ -133,7 +141,7 @@ def get_trigger_rule(
 def update_trigger_rule(
     rule_id: int,
     rule_update: TriggerRuleUpdate,
-    trigger_service: TriggerService = Depends(get_trigger_service)
+    trigger_service: TriggerService = Depends(get_trigger_service),
 ):
     """
     Update a trigger rule.
@@ -149,7 +157,7 @@ def update_trigger_rule(
         if not rule:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Trigger rule with ID {rule_id} not found"
+                detail=f"Trigger rule with ID {rule_id} not found",
             )
 
         # Get update data, excluding unset fields
@@ -159,7 +167,10 @@ def update_trigger_rule(
         if "source_condition" in update_data:
             # Use the validator from the model
             from ..models.trigger_rule import TriggerRuleUpdate as TRU
-            validated_condition = TRU.validate_source_condition(update_data["source_condition"])
+
+            validated_condition = TRU.validate_source_condition(
+                update_data["source_condition"]
+            )
             update_data["source_condition"] = validated_condition
 
         # Update fields
@@ -179,14 +190,13 @@ def update_trigger_rule(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error updating trigger rule: {str(e)}"
+            detail=f"Error updating trigger rule: {str(e)}",
         )
 
 
 @router.delete("/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_trigger_rule(
-    rule_id: int,
-    trigger_service: TriggerService = Depends(get_trigger_service)
+    rule_id: int, trigger_service: TriggerService = Depends(get_trigger_service)
 ):
     """
     Delete a trigger rule.
@@ -198,7 +208,7 @@ def delete_trigger_rule(
         if not rule:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Trigger rule with ID {rule_id} not found"
+                detail=f"Trigger rule with ID {rule_id} not found",
             )
 
         trigger_service.session.delete(rule)
@@ -211,7 +221,7 @@ def delete_trigger_rule(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error deleting trigger rule: {str(e)}"
+            detail=f"Error deleting trigger rule: {str(e)}",
         )
 
 
@@ -220,7 +230,7 @@ def test_trigger_evaluation(
     artifact_id: int,
     condition: str,
     trigger_service: TriggerService = Depends(get_trigger_service),
-    artifact_service: ArtifactService = Depends(get_artifact_service)
+    artifact_service: ArtifactService = Depends(get_artifact_service),
 ):
     """
     Test trigger condition evaluation.
@@ -235,36 +245,27 @@ def test_trigger_evaluation(
         if not artifact:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Artifact with ID {artifact_id} not found"
+                detail=f"Artifact with ID {artifact_id} not found",
             )
 
         # Evaluate condition using trigger service
         result = trigger_service.evaluate_condition(
-            artifact=artifact,
-            condition=condition
+            artifact=artifact, condition=condition
         )
 
-        return {
-            "condition": condition,
-            "result": result,
-            "error": None
-        }
+        return {"condition": condition, "result": result, "error": None}
 
     except HTTPException:
         raise
     except Exception as e:
-        return {
-            "condition": condition,
-            "result": False,
-            "error": str(e)
-        }
+        return {"condition": condition, "result": False, "error": str(e)}
 
 
 @router.get("/suggestions/{artifact_id}")
 def get_trigger_suggestions(
     artifact_id: int,
     trigger_service: TriggerService = Depends(get_trigger_service),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ):
     """
     Get trigger suggestions for an artifact.
@@ -278,23 +279,18 @@ def get_trigger_suggestions(
         if not artifact:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Artifact with ID {artifact_id} not found"
+                detail=f"Artifact with ID {artifact_id} not found",
             )
 
         # Get trigger suggestions
-        suggestions = trigger_service.get_trigger_suggestions(
-            artifact=artifact
-        )
+        suggestions = trigger_service.get_trigger_suggestions(artifact=artifact)
 
-        return {
-            "artifact_id": artifact_id,
-            "suggestions": suggestions
-        }
+        return {"artifact_id": artifact_id, "suggestions": suggestions}
 
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error getting suggestions: {str(e)}"
+            detail=f"Error getting suggestions: {str(e)}",
         )

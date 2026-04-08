@@ -7,12 +7,18 @@ PHASE 5: API Routes
 - Search and filtering endpoints
 - Integration with template and trigger services
 """
+
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-from src.models.artifact import Artifact, ArtifactCreate, ArtifactUpdate, ArtifactStatusUpdate
+from src.models.artifact import (
+    Artifact,
+    ArtifactCreate,
+    ArtifactUpdate,
+    ArtifactStatusUpdate,
+)
 from src.models.squad import Squad
 from src.models.trigger_rule import TriggerRule
 
@@ -31,7 +37,7 @@ def test_create_artifact(client, session):
         "squad_code": "test-squad",
         "name": "Test Squad",
         "tech_lead": "Test Lead",
-        "status": "active"
+        "status": "active",
     }
     squad_response = client.post("/api/squads", json=squad_data)
     assert squad_response.status_code == 201
@@ -46,11 +52,12 @@ def test_create_artifact(client, session):
         "status": "proposed",
         "content": "Test content for ADR",
         "squad_id": squad_id,
-        "rfc_status": "RFC-2024-001 completed"
+        "rfc_status": "RFC-2024-001 completed",
     }
 
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService, \
-         patch('src.api.artifacts.TriggerService') as MockTriggerService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService, patch(
+        "src.api.artifacts.TriggerService"
+    ) as MockTriggerService:
 
         mock_artifact_service = Mock()
         mock_trigger_service = Mock()
@@ -68,7 +75,7 @@ def test_create_artifact(client, session):
             updated_at=datetime.utcnow(),
             file_path="architecture/adr/ADR-001-001.md",
             template_used="adr_template.md",
-            rfc_status="RFC-2024-001 completed"
+            rfc_status="RFC-2024-001 completed",
         )
 
         mock_artifact_service.create_artifact.return_value = mock_artifact
@@ -94,7 +101,7 @@ def test_create_artifact_invalid_type(client):
         "artifact_number": "auto",
         "title": "Test",
         "content": "Test content",
-        "squad_id": 1
+        "squad_id": 1,
     }
 
     response = client.post("/api/artifacts", json=artifact_data)
@@ -104,7 +111,7 @@ def test_create_artifact_invalid_type(client):
 def test_get_artifact_by_id(client, session):
     """Test getting artifact by ID."""
     # Create a test artifact via service
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
         mock_artifact = Artifact(
             id=1,
@@ -115,7 +122,7 @@ def test_get_artifact_by_id(client, session):
             content="Test RFC content",
             squad_id=1,
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            updated_at=datetime.utcnow(),
         )
         mock_service.get_artifact.return_value = mock_artifact
         MockArtifactService.return_value = mock_service
@@ -131,7 +138,7 @@ def test_get_artifact_by_id(client, session):
 
 def test_get_artifact_not_found(client):
     """Test getting non-existent artifact."""
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
         mock_service.get_artifact.return_value = None
         MockArtifactService.return_value = mock_service
@@ -144,7 +151,7 @@ def test_get_artifact_not_found(client):
 
 def test_update_artifact(client):
     """Test updating an artifact."""
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
         updated_artifact = Artifact(
             id=1,
@@ -157,7 +164,7 @@ def test_update_artifact(client):
             squad_id=1,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
-            rfc_status="RFC-2024-001 completed"
+            rfc_status="RFC-2024-001 completed",
         )
         mock_service.update_artifact.return_value = updated_artifact
         MockArtifactService.return_value = mock_service
@@ -165,7 +172,7 @@ def test_update_artifact(client):
         update_data = {
             "title": "Updated Title",
             "content": "Updated content",
-            "status": "accepted"
+            "status": "accepted",
         }
 
         response = client.put("/api/artifacts/1", json=update_data)
@@ -178,7 +185,7 @@ def test_update_artifact(client):
 
 def test_update_artifact_not_found(client):
     """Test updating non-existent artifact."""
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
         mock_service.update_artifact.return_value = None
         MockArtifactService.return_value = mock_service
@@ -191,7 +198,7 @@ def test_update_artifact_not_found(client):
 
 def test_delete_artifact(client):
     """Test deleting an artifact."""
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
         mock_service.delete_artifact.return_value = True
         MockArtifactService.return_value = mock_service
@@ -203,7 +210,7 @@ def test_delete_artifact(client):
 
 def test_delete_artifact_not_found(client):
     """Test deleting non-existent artifact."""
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
         mock_service.delete_artifact.return_value = False
         MockArtifactService.return_value = mock_service
@@ -215,8 +222,9 @@ def test_delete_artifact_not_found(client):
 
 def test_update_artifact_status(client):
     """Test updating artifact status."""
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService, \
-         patch('src.api.artifacts.TriggerService') as MockTriggerService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService, patch(
+        "src.api.artifacts.TriggerService"
+    ) as MockTriggerService:
 
         mock_artifact_service = Mock()
         mock_trigger_service = Mock()
@@ -232,7 +240,7 @@ def test_update_artifact_status(client):
             squad_id=1,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
-            rfc_status="RFC-2024-001 completed"
+            rfc_status="RFC-2024-001 completed",
         )
 
         # Mock the artifact service methods
@@ -246,9 +254,7 @@ def test_update_artifact_status(client):
         MockArtifactService.return_value = mock_artifact_service
         MockTriggerService.return_value = mock_trigger_service
 
-        status_data = {
-            "status": "accepted"
-        }
+        status_data = {"status": "accepted"}
 
         response = client.patch("/api/artifacts/1/status", json=status_data)
 
@@ -259,8 +265,9 @@ def test_update_artifact_status(client):
 
 def test_update_artifact_status_superseded(client):
     """Test updating artifact status to superseded with superseded_by."""
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService, \
-         patch('src.api.artifacts.TriggerService') as MockTriggerService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService, patch(
+        "src.api.artifacts.TriggerService"
+    ) as MockTriggerService:
 
         mock_artifact_service = Mock()
         mock_trigger_service = Mock()
@@ -276,7 +283,7 @@ def test_update_artifact_status_superseded(client):
             squad_id=1,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
-            rfc_status="RFC-2024-001 completed"
+            rfc_status="RFC-2024-001 completed",
         )
 
         # Mock the artifact service methods
@@ -290,10 +297,7 @@ def test_update_artifact_status_superseded(client):
         MockArtifactService.return_value = mock_artifact_service
         MockTriggerService.return_value = mock_trigger_service
 
-        status_data = {
-            "status": "superseded",
-            "superseded_by": "ADR-002-001"
-        }
+        status_data = {"status": "superseded", "superseded_by": "ADR-002-001"}
 
         response = client.patch("/api/artifacts/1/status", json=status_data)
 
@@ -304,7 +308,7 @@ def test_update_artifact_status_superseded(client):
 
 def test_search_artifacts_by_type(client, session):
     """Test searching artifacts by type."""
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
         mock_artifacts = [
             Artifact(
@@ -318,7 +322,7 @@ def test_search_artifacts_by_type(client, session):
                 squad_id=1,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
-                rfc_status="RFC-2024-001 completed"
+                rfc_status="RFC-2024-001 completed",
             ),
             Artifact(
                 id=2,
@@ -333,8 +337,8 @@ def test_search_artifacts_by_type(client, session):
                 updated_at=datetime.utcnow(),
                 rfc_status="RFC-2024-002 completed",
                 tco_estimate="10000",
-                lgpd_analysis="Low risk"
-            )
+                lgpd_analysis="Low risk",
+            ),
         ]
         mock_service.search_artifacts.return_value = mock_artifacts
         MockArtifactService.return_value = mock_service
@@ -349,7 +353,7 @@ def test_search_artifacts_by_type(client, session):
 
 def test_search_artifacts_by_squad(client, session):
     """Test searching artifacts by squad."""
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
         mock_artifacts = [
             Artifact(
@@ -363,7 +367,7 @@ def test_search_artifacts_by_squad(client, session):
                 squad_id=1,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
-                rfc_status="RFC-2024-001 completed"
+                rfc_status="RFC-2024-001 completed",
             )
         ]
         mock_service.search_artifacts.return_value = mock_artifacts
@@ -379,7 +383,7 @@ def test_search_artifacts_by_squad(client, session):
 
 def test_search_artifacts_by_status(client, session):
     """Test searching artifacts by status."""
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
         mock_artifacts = [
             Artifact(
@@ -393,7 +397,7 @@ def test_search_artifacts_by_status(client, session):
                 squad_id=1,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
-                rfc_status="RFC-2024-001 completed"
+                rfc_status="RFC-2024-001 completed",
             )
         ]
         mock_service.search_artifacts.return_value = mock_artifacts
@@ -409,7 +413,7 @@ def test_search_artifacts_by_status(client, session):
 
 def test_search_artifacts_multiple_filters(client, session):
     """Test searching artifacts with multiple filters."""
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
         mock_artifacts = [
             Artifact(
@@ -425,13 +429,15 @@ def test_search_artifacts_multiple_filters(client, session):
                 updated_at=datetime.utcnow(),
                 rfc_status="RFC-2024-001 completed",
                 tco_estimate="15000",
-                lgpd_analysis="Medium risk"
+                lgpd_analysis="Medium risk",
             )
         ]
         mock_service.search_artifacts.return_value = mock_artifacts
         MockArtifactService.return_value = mock_service
 
-        response = client.get("/api/artifacts/search?artifact_type=adr&status=accepted&squad_id=1")
+        response = client.get(
+            "/api/artifacts/search?artifact_type=adr&status=accepted&squad_id=1"
+        )
 
     assert response.status_code == 200
     data = response.json()
@@ -443,22 +449,24 @@ def test_search_artifacts_multiple_filters(client, session):
 
 def test_get_artifacts_by_squad(client, session):
     """Test getting artifacts for a specific squad."""
-    with patch('src.api.squads.ArtifactService') as MockArtifactService, \
-         patch('src.api.squads.SquadService') as MockSquadService:
+    with patch("src.api.squads.ArtifactService") as MockArtifactService, patch(
+        "src.api.squads.SquadService"
+    ) as MockSquadService:
 
         mock_artifact_service = Mock()
         mock_squad_service = Mock()
 
         # Mock squad
         from src.models.squad import Squad
+
         mock_squad = Squad(
             id=1,
-            squad_code='1',
-            name='Test Squad',
-            tech_lead='Test Lead',
-            status='active',
+            squad_code="1",
+            name="Test Squad",
+            tech_lead="Test Lead",
+            status="active",
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            updated_at=datetime.utcnow(),
         )
         mock_squad_service.get_squad.return_value = mock_squad
 
@@ -475,7 +483,7 @@ def test_get_artifacts_by_squad(client, session):
                 squad_id=1,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
-                rfc_status="RFC-2024-001 completed"
+                rfc_status="RFC-2024-001 completed",
             ),
             Artifact(
                 id=2,
@@ -486,8 +494,8 @@ def test_get_artifacts_by_squad(client, session):
                 content="RFC content",
                 squad_id=1,
                 created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
-            )
+                updated_at=datetime.utcnow(),
+            ),
         ]
         mock_artifact_service.get_artifacts_by_squad.return_value = mock_artifacts
 
@@ -504,9 +512,11 @@ def test_get_artifacts_by_squad(client, session):
 
 def test_get_artifact_file(client):
     """Test getting artifact file content."""
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
-        mock_service.get_artifact_file_content.return_value = "# Test ADR\n\nTest content"
+        mock_service.get_artifact_file_content.return_value = (
+            "# Test ADR\n\nTest content"
+        )
         MockArtifactService.return_value = mock_service
 
         response = client.get("/api/artifacts/1/file")
@@ -518,7 +528,7 @@ def test_get_artifact_file(client):
 
 def test_get_artifact_file_not_found(client):
     """Test getting file for artifact without file."""
-    with patch('src.api.artifacts.ArtifactService') as MockArtifactService:
+    with patch("src.api.artifacts.ArtifactService") as MockArtifactService:
         mock_service = Mock()
         mock_service.get_artifact_file_content.return_value = None
         MockArtifactService.return_value = mock_service
