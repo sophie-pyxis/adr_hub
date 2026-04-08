@@ -8,13 +8,14 @@ PHASE 6: Health endpoints
 - Overall system status
 """
 
-from typing import Dict, Any
-from fastapi import APIRouter, HTTPException, Depends
+from typing import Any, Dict
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
-from ..services.health_service import HealthService
-from ..services.artifact_service import ArtifactService
 from ..database import get_session
+from ..services.artifact_service import ArtifactService
+from ..services.health_service import HealthService
 
 router = APIRouter(prefix="/api/health", tags=["health"])
 

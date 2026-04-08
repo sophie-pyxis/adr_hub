@@ -8,10 +8,11 @@ PHASE 6: Health endpoints
 - Overall system status
 """
 
+import os
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import Mock, patch, MagicMock
-import os
 
 from src.services.health_service import HealthService, HealthStatus
 
@@ -245,8 +246,9 @@ def test_health_endpoint(client):
 
 def test_health_endpoint_unhealthy(client):
     """Test health API endpoint when system is unhealthy."""
-    from src.api.health import get_health_service
     from unittest.mock import Mock
+
+    from src.api.health import get_health_service
 
     # Create a mock health service
     mock_service = Mock()
@@ -278,8 +280,9 @@ def test_health_endpoint_unhealthy(client):
 
 def test_health_endpoint_internal_error(client):
     """Test health API endpoint when service raises exception."""
-    from src.api.health import get_health_service
     from unittest.mock import Mock
+
+    from src.api.health import get_health_service
 
     # Create a mock health service that raises an exception
     mock_service = Mock()

@@ -2,15 +2,16 @@
 Unified artifact model for all artifact types.
 """
 
-from datetime import datetime
-from typing import Optional, TYPE_CHECKING
-from sqlmodel import SQLModel, Field, Relationship
-from pydantic import field_validator, model_validator
 import re
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
+
+from pydantic import field_validator, model_validator
+from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from .squad import Squad
     from .artifact_reference import ArtifactReference
+    from .squad import Squad
 
 
 class ArtifactBase(SQLModel):

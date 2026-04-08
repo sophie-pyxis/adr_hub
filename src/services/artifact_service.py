@@ -9,22 +9,23 @@ PHASE 3: Artifact Service
 """
 
 import re
-from typing import List, Optional, Dict, Any
-from sqlmodel import Session, select, or_
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
+from sqlmodel import Session, or_, select
+
+from ..database import get_session
 from ..models.artifact import (
     Artifact,
     ArtifactCreate,
-    ArtifactUpdate,
-    ArtifactStatusUpdate,
     ArtifactRead,
+    ArtifactStatusUpdate,
+    ArtifactUpdate,
 )
 from ..models.squad import Squad
 from .squad_service import SquadService
 from .template_service import TemplateService
-from ..database import get_session
 
 
 class ArtifactService:

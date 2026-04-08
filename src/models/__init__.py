@@ -2,20 +2,20 @@
 SQLModel models for AI Architecture Governance System.
 """
 
-from .squad import Squad, SquadCreate, SquadUpdate, SquadRead
 from .artifact import (
     Artifact,
     ArtifactCreate,
-    ArtifactUpdate,
-    ArtifactStatusUpdate,
     ArtifactRead,
+    ArtifactStatusUpdate,
+    ArtifactUpdate,
 )
-from .trigger_rule import TriggerRule, TriggerRuleCreate, TriggerRuleRead
 from .artifact_reference import (
     ArtifactReference,
     ArtifactReferenceCreate,
     ArtifactReferenceRead,
 )
+from .squad import Squad, SquadCreate, SquadRead, SquadUpdate
+from .trigger_rule import TriggerRule, TriggerRuleCreate, TriggerRuleRead
 
 __all__ = [
     "Squad",

@@ -1,12 +1,13 @@
 #!/usr/bin/env python
-import sys
 import os
+import sys
 
 project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
 
-from src.services.template_service import TemplateService
 import re
+
+from src.services.template_service import TemplateService
 
 service = TemplateService()
 

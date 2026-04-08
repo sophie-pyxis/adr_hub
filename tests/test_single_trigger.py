@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-import sys
 import os
+import sys
 import traceback
 
 # Add project root to Python path
@@ -11,10 +11,10 @@ print("Testing single trigger test...")
 
 try:
     # Try to import just the first test function
-    from src.models.trigger_rule import TriggerRule
     from src.models.artifact import Artifact
-    from src.services.trigger_service import TriggerService
+    from src.models.trigger_rule import TriggerRule
     from src.services.artifact_service import ArtifactService
+    from src.services.trigger_service import TriggerService
 
     print("All imports successful")
 

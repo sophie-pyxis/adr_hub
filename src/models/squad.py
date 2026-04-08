@@ -2,11 +2,12 @@
 Squad model for AI Architecture Governance System.
 """
 
-from datetime import datetime
-from typing import Optional, List, TYPE_CHECKING
-from sqlmodel import SQLModel, Field, Relationship
-from pydantic import field_validator
 import re
+from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
+
+from pydantic import field_validator
+from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from .artifact import Artifact

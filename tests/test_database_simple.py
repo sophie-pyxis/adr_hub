@@ -6,10 +6,10 @@ import pytest
 from sqlmodel import Session
 
 from src.database.engine import (
+    create_db_and_tables,
     get_database_url,
     get_engine,
     get_session,
-    create_db_and_tables,
 )
 
 

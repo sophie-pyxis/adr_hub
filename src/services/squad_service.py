@@ -2,12 +2,13 @@
 Squad service with business logic.
 """
 
-from typing import List, Optional
-from sqlmodel import Session, select
 from datetime import datetime
+from typing import List, Optional
 
-from ..models.squad import Squad, SquadCreate, SquadUpdate, SquadRead
+from sqlmodel import Session, select
+
 from ..database import get_session
+from ..models.squad import Squad, SquadCreate, SquadRead, SquadUpdate
 
 
 class SquadService:

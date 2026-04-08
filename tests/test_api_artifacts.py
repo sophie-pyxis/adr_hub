@@ -8,16 +8,17 @@ PHASE 5: API Routes
 - Integration with template and trigger services
 """
 
+from datetime import datetime
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
 
 from src.models.artifact import (
     Artifact,
     ArtifactCreate,
-    ArtifactUpdate,
     ArtifactStatusUpdate,
+    ArtifactUpdate,
 )
 from src.models.squad import Squad
 from src.models.trigger_rule import TriggerRule

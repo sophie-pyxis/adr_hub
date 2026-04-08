@@ -11,11 +11,12 @@ PHASE 4: Trigger Service
 import ast
 import operator
 import re
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from sqlmodel import Session, select
 
-from ..models.trigger_rule import TriggerRule
 from ..models.artifact import Artifact, ArtifactCreate
+from ..models.trigger_rule import TriggerRule
 from ..services.artifact_service import ArtifactService
 
 

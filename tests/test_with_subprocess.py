@@ -49,11 +49,11 @@ def test_squad_model_importable():
 def test_services_importable():
     """All active services must be importable."""
     from src.services import (
+        ArtifactService,
+        HealthService,
         SquadService,
         TemplateService,
-        ArtifactService,
         TriggerService,
-        HealthService,
     )
 
     assert all(

@@ -8,19 +8,20 @@ PHASE 5: API Routes
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session, select
 
+from ..database import get_session
+from ..models.artifact import Artifact
 from ..models.trigger_rule import (
     TriggerRule,
     TriggerRuleCreate,
     TriggerRuleRead,
     TriggerRuleUpdate,
 )
-from ..models.artifact import Artifact
-from ..services.trigger_service import TriggerService
 from ..services.artifact_service import ArtifactService
-from ..database import get_session
+from ..services.trigger_service import TriggerService
 
 router = APIRouter(prefix="/api/triggers", tags=["triggers"])
 

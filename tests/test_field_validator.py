@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-import sys
 import os
+import sys
 
 # Add project root to Python path
 project_root = os.path.dirname(os.path.abspath(__file__))

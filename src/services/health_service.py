@@ -10,10 +10,11 @@ PHASE 6: Health endpoints
 
 import os
 import time
-from typing import Dict, Any, List
-from enum import Enum
-from sqlmodel import Session, select
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List
+
+from sqlmodel import Session, select
 
 from ..models.artifact import Artifact
 from ..models.squad import Squad

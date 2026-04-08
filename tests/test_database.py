@@ -4,15 +4,16 @@ Test suite for database engine configuration.
 
 import os
 import tempfile
+
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
 from sqlalchemy.pool import StaticPool
+from sqlmodel import Session, SQLModel, create_engine
 
 from src.database.engine import (
+    create_db_and_tables,
     get_database_url,
     get_engine,
     get_session,
-    create_db_and_tables,
 )
 
 

@@ -3,14 +3,15 @@ Squads API router.
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, status, Depends
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
-from ..models.squad import SquadCreate, SquadUpdate, SquadRead
-from ..models.artifact import ArtifactRead
-from ..services.squad_service import SquadService
-from ..services.artifact_service import ArtifactService
 from ..database import get_session
+from ..models.artifact import ArtifactRead
+from ..models.squad import SquadCreate, SquadRead, SquadUpdate
+from ..services.artifact_service import ArtifactService
+from ..services.squad_service import SquadService
 
 router = APIRouter(prefix="/api/squads", tags=["squads"])
 

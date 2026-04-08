@@ -7,13 +7,14 @@ PHASE 2: Template Service
 - Template validation and schema matching
 """
 
-import pytest
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
 import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 
-from src.services.template_service import TemplateService, TemplateValidationError
+import pytest
+
 from src.models.artifact import ArtifactCreate
+from src.services.template_service import TemplateService, TemplateValidationError
 
 
 def test_template_service_initialization():

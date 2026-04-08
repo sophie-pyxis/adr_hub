@@ -5,7 +5,7 @@ AI Architecture Governance System - FastAPI Application Entry Point
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api import squads_router, artifacts_router, triggers_router, health_router
+from src.api import artifacts_router, health_router, squads_router, triggers_router
 from src.database import create_db_and_tables
 
 app = FastAPI(

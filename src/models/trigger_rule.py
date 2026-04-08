@@ -4,8 +4,9 @@ Trigger rule model for defining automatic artifact creation rules.
 
 from datetime import datetime
 from typing import Optional
-from sqlmodel import SQLModel, Field
+
 from pydantic.functional_validators import field_validator
+from sqlmodel import Field, SQLModel
 
 
 class TriggerRuleBase(SQLModel):

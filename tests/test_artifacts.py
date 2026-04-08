@@ -8,17 +8,18 @@ PHASE 3: Artifact Service
 - Validation and schema matching
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from sqlmodel import Session, select
 from datetime import datetime
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
+from sqlmodel import Session, select
 
 from src.models.artifact import (
     Artifact,
     ArtifactCreate,
-    ArtifactUpdate,
-    ArtifactStatusUpdate,
     ArtifactRead,
+    ArtifactStatusUpdate,
+    ArtifactUpdate,
 )
 from src.models.squad import Squad
 from src.services.artifact_service import ArtifactService

@@ -9,10 +9,10 @@ Strict path mapping for artifact types:
 - TECH_DEBT: docs/tech-debt/{debt_id}.md
 """
 
+import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Union
-import datetime
 
 
 class ArtifactType(str, Enum):

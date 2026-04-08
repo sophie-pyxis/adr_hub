@@ -9,19 +9,20 @@ PHASE 5: API Routes
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, status, Depends, Query, Response
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlmodel import Session
 
+from ..database import get_session
 from ..models.artifact import (
     ArtifactCreate,
-    ArtifactUpdate,
-    ArtifactStatusUpdate,
     ArtifactRead,
+    ArtifactStatusUpdate,
+    ArtifactUpdate,
 )
 from ..models.squad import Squad
 from ..services.artifact_service import ArtifactService
 from ..services.trigger_service import TriggerService
-from ..database import get_session
 
 router = APIRouter(prefix="/api/artifacts", tags=["artifacts"])
 

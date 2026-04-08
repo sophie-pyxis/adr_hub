@@ -4,8 +4,8 @@ Test configuration and fixtures for AI Architecture Governance System.
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel, Session, create_engine
 from sqlalchemy.pool import StaticPool
+from sqlmodel import Session, SQLModel, create_engine
 
 from src.database import get_session
 from src.main import app

@@ -8,16 +8,17 @@ PHASE 4: Trigger Service
 - Safe evaluation of condition expressions
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from sqlmodel import Session, select
 from datetime import datetime
+from unittest.mock import MagicMock, Mock, patch
 
-from src.models.trigger_rule import TriggerRule, TriggerRuleCreate
+import pytest
+from sqlmodel import Session, select
+
 from src.models.artifact import Artifact, ArtifactCreate
 from src.models.squad import Squad
-from src.services.trigger_service import TriggerService
+from src.models.trigger_rule import TriggerRule, TriggerRuleCreate
 from src.services.artifact_service import ArtifactService
+from src.services.trigger_service import TriggerService
 
 
 def test_trigger_service_initialization():

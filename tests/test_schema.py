@@ -2,14 +2,15 @@
 Test database schema for unified artifact model.
 """
 
-import pytest
-from sqlmodel import Session, select
 from datetime import datetime
 
+import pytest
+from sqlmodel import Session, select
+
 from src.models.artifact import Artifact, ArtifactCreate
-from src.models.trigger_rule import TriggerRule, TriggerRuleCreate
 from src.models.artifact_reference import ArtifactReference, ArtifactReferenceCreate
 from src.models.squad import Squad, SquadCreate
+from src.models.trigger_rule import TriggerRule, TriggerRuleCreate
 
 
 def test_artifact_creation_valid(session: Session):
