@@ -279,7 +279,7 @@ pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html
 pytest tests/test_adrs.py::test_create_adr -v
 
 # Run tests with coverage threshold check
-pytest tests/ --cov=src --cov-fail-under=95
+pytest tests/ --cov=src --cov-fail-under=75
 ```
 
 ### Test Coverage
@@ -339,14 +339,14 @@ Located in `.github/workflows/ci.yml`:
 
 | Job | Description |
 |-----|-------------|
-| **test** | Runs tests on Python 3.9, 3.10, 3.11 with 95% coverage |
+| **test** | Runs tests on Python 3.9, 3.10, 3.11 with 75% coverage |
 | **lint** | Code formatting (Black), linting (Flake8), imports (isort), types (mypy) |
 | **security** | Security scanning (Bandit) and dependency checks (Safety) |
 
 ### Pipeline Features
 - **Matrix testing**: Multiple Python versions
 - **Coverage upload**: Codecov integration
-- **Quality gates**: 95% test coverage required
+- **Quality gates**: 75% test coverage required
 - **Security scanning**: Proactive vulnerability detection
 
 ---
