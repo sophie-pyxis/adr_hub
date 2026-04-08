@@ -2,182 +2,250 @@
 
 **REST API for managing Architecture Decision Records — FastAPI · SQLModel · Clean Architecture**
 
-ADR Hub turns architecture governance from a folder of markdown files into a queryable, auditable system: 7 artifact types with automatic numbering, trigger rules that fire on status changes, cross-artifact references, healthcare compliance fields (LGPD, TCO, health impact), and a health analysis endpoint that surfaces gaps before they become incidents.
+ADR Hub transforms architecture governance from scattered markdown files into a queryable, auditable system with 7 artifact types, automatic numbering, trigger rules, cross-references, healthcare compliance fields, and proactive health analysis.
 
 ---
 
 ## Contents
 
-- [Architecture](#architecture)
+- [Architecture Overview](#architecture-overview)
+- [Core Concepts](#core-concepts)
+- [System Architecture](#system-architecture)
 - [Data Model](#data-model)
-- [Artifact Types & Naming](#artifact-types--naming)
+- [Artifact Types](#artifact-types)
 - [ADR Level System](#adr-level-system)
-- [Status State Machine](#status-state-machine)
+- [Status Management](#status-management)
 - [Trigger System](#trigger-system)
 - [API Reference](#api-reference)
 - [Project Structure](#project-structure)
 - [Quick Start](#quick-start)
 - [Testing](#testing)
-- [CI/CD](#cicd)
-- [Docker Deployment](#docker-deployment)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Deployment](#deployment)
 - [Roadmap](#roadmap)
 - [License](#license)
 
 ---
 
-## Architecture
+## Architecture Overview
 
-### Clean Architecture Layers
+ADR Hub follows Clean Architecture principles with clear separation of concerns:
 
 ```mermaid
-flowchart TB
-    subgraph Client
-        HTTP([HTTP Client])
-    end
+flowchart LR
+    Client[HTTP Client] --> API[API Layer]
+    API --> Services[Service Layer]
+    Services --> Models[Models Layer]
+    Services --> Persistence[(Persistence)]
+```
 
-    subgraph API["API Layer — src/api/"]
+### Key Architectural Principles
+
+1. **Separation of Concerns**: Clear boundaries between API, business logic, and data access
+2. **Dependency Inversion**: High-level modules don't depend on low-level implementations
+3. **Testability**: All components are independently testable with dependency injection
+4. **Maintainability**: Modular design with single responsibility per component
+
+---
+
+## Core Concepts
+
+### 1. Artifacts
+Seven distinct artifact types for comprehensive architecture governance:
+- **ADR**: Architecture Decision Records (levels 1-5)
+- **RFC**: Request for Comments
+- **Evidence**: Supporting evidence for decisions
+- **Governance**: Policy and compliance documents
+- **Implementation**: Technical implementation details
+- **Visibility**: System observability decisions
+- **Uncommon**: Edge cases and special scenarios
+
+### 2. Squads
+Development teams that own artifacts, with lifecycle management:
+- Active, inactive, or discontinued status
+- Tech lead assignment
+- Artifact ownership tracking
+
+### 3. Trigger Rules
+Automated relationships between artifacts:
+- Condition-based evaluation
+- Auto-creation of related artifacts
+- Required vs. suggested triggers
+
+### 4. Health Analysis
+Proactive system monitoring:
+- Compliance gap detection
+- Missing artifact identification
+- Ecosystem health scoring
+
+---
+
+## System Architecture
+
+### 1. Clean Architecture Layers
+
+**API Layer** (`src/api/`):
+```mermaid
+flowchart TB
+    subgraph API["API Layer"]
         A1[artifacts.py]
         A2[squads.py]
         A3[trigger_rules.py]
         A4[health.py]
     end
+    
+    API -->|HTTP| Client[HTTP Client]
+    API -->|Depends| Services[Service Layer]
+```
 
-    subgraph Services["Service Layer — src/services/"]
+**Service Layer** (`src/services/`):
+```mermaid
+flowchart TB
+    subgraph Services["Service Layer"]
         S1[ArtifactService]
         S2[SquadService]
         S3[TriggerService]
         S4[TemplateService]
         S5[HealthService]
     end
+    
+    Services -->|Business Logic| API[API Layer]
+    Services -->|Data Access| Models[Models Layer]
+```
 
-    subgraph Models["Models Layer — src/models/"]
+**Models Layer** (`src/models/`):
+```mermaid
+flowchart TB
+    subgraph Models["Models Layer"]
         M1[Artifact]
         M2[Squad]
         M3[TriggerRule]
         M4[ArtifactReference]
     end
-
-    subgraph Persistence
-        DB[(locale/governance.db<br/>SQLite)]
-        FS[architecture/<br/>Markdown files]
-    end
-
-    HTTP -->|HTTP Request| API
-    API -->|Depends injection| Services
-    Services -->|Pydantic validation| Models
-    Services -->|SQLModel ORM| DB
-    Services -->|Path.write_text| FS
-    DB -->|Query results| Services
-    Services -->|Response models| API
-    API -->|HTTP Response| HTTP
+    
+    Models -->|Validation| Services[Service Layer]
+    Models -->|ORM| DB[(Database)]
 ```
 
-### Request Lifecycle — Create Artifact
+### 2. Request Flow
 
+**Create Artifact Sequence**:
 ```mermaid
 sequenceDiagram
     participant C as Client
-    participant R as Router
+    participant API as API Router
     participant AS as ArtifactService
-    participant TS as TemplateService
-    participant TRG as TriggerService
-    participant DB as SQLite
-    participant FS as FileSystem
+    participant DB as Database
+    
+    C->>API: POST /api/artifacts
+    API->>AS: create_artifact(data)
+    AS->>DB: Validate squad
+    AS->>AS: Generate artifact number
+    AS->>DB: Create artifact record
+    AS->>FS: Write markdown file
+    AS-->>API: ArtifactRead
+    API-->>C: 201 Created
+```
 
-    C->>R: POST /api/artifacts/ {type=adr, number=auto}
-    R->>AS: create_artifact(data)
-    AS->>DB: SELECT squad — validate exists & active
-    AS->>AS: _generate_artifact_number(type, level, session)
-    AS->>TS: generate_content_for_artifact(data)
-    TS->>TS: load template + substitute placeholders
-    TS-->>AS: rendered markdown
-    AS->>DB: INSERT artifact
-    AS->>FS: write architecture/decisions/ADR-003-001.md
-    AS->>TRG: process_artifact_triggers(artifact)
-    TRG->>DB: SELECT trigger_rules WHERE source_type=adr
-    TRG->>TRG: evaluate_condition() — safe AST eval
-    alt auto_create rule matched
-        TRG->>DB: INSERT triggered artifact
-        TRG->>DB: INSERT artifact_reference (both directions)
+**Trigger Evaluation Flow**:
+```mermaid
+sequenceDiagram
+    participant AS as ArtifactService
+    participant TS as TriggerService
+    participant DB as Database
+    
+    AS->>TS: process_artifact_triggers(artifact)
+    TS->>DB: Load trigger rules
+    TS->>TS: Evaluate conditions
+    alt Condition Met
+        TS->>DB: Create related artifact
+        TS->>DB: Create references
     end
-    TRG-->>AS: triggered artifacts list
-    AS-->>R: ArtifactRead
-    R-->>C: 201 Created
+    TS-->>AS: Trigger results
+```
+
+### 3. Deployment Architecture
+
+```mermaid
+flowchart TB
+    subgraph Cloud["Cloud Environment"]
+        LB[Load Balancer]
+        subgraph App["Application Tier"]
+            A1[API Instance 1]
+            A2[API Instance 2]
+        end
+        subgraph Data["Data Tier"]
+            DB[(PostgreSQL)]
+            FS[File Storage]
+        end
+    end
+    
+    User[End User] --> LB
+    LB --> A1
+    LB --> A2
+    A1 --> DB
+    A2 --> DB
+    A1 --> FS
+    A2 --> FS
 ```
 
 ---
 
 ## Data Model
 
+### Entity Relationships
+
 ```mermaid
 erDiagram
-    SQUAD {
-        int     id              PK
-        string  squad_code      UK
-        string  name
-        string  tech_lead
-        string  status
-        string  discontinued_reason
-        datetime created_at
-        datetime updated_at
-        datetime deleted_at
-    }
+    SQUAD ||--o{ ARTIFACT : owns
+    ARTIFACT ||--o{ ARTIFACT_REFERENCE : references
+    TRIGGER_RULE }o--o{ ARTIFACT : triggers
+```
 
-    ARTIFACT {
-        int     id              PK
-        string  artifact_type
-        string  artifact_number UK
-        string  title
-        string  status
-        int     level
-        text    content
-        string  file_path
-        string  template_used
-        int     squad_id        FK
-        int     triggered_by_id FK
-        string  trigger_reason
-        string  tco_estimate
-        string  lgpd_analysis
-        string  rfc_status
-        string  health_compliance_impact
-        string  created_by_ip
-        datetime created_at
-        datetime updated_at
-    }
+### Core Entities
 
-    TRIGGER_RULE {
-        int     id              PK
-        string  source_type
-        string  source_condition
-        string  target_type
-        bool    auto_create
-        bool    required
-        string  description
-        datetime created_at
-    }
+**Squad**:
+```yaml
+id: int (PK)
+squad_code: string (UK)
+name: string
+tech_lead: string
+status: string
+created_at: datetime
+updated_at: datetime
+deleted_at: datetime (soft delete)
+```
 
-    ARTIFACT_REFERENCE {
-        int     id              PK
-        int     from_artifact_id FK
-        int     to_artifact_id   FK
-        string  reference_type
-        datetime created_at
-    }
+**Artifact**:
+```yaml
+id: int (PK)
+artifact_type: string
+artifact_number: string (UK)
+title: string
+status: string
+level: int (1-5, ADR only)
+content: text
+squad_id: int (FK)
+triggered_by_id: int (FK, self-reference)
+```
 
-    SQUAD            ||--o{  ARTIFACT           : "owns"
-    ARTIFACT         ||--o{  ARTIFACT           : "triggered_by (self)"
-    ARTIFACT         ||--o{  ARTIFACT_REFERENCE : "from"
-    ARTIFACT         ||--o{  ARTIFACT_REFERENCE : "to"
+**TriggerRule**:
+```yaml
+id: int (PK)
+source_type: string
+source_condition: string
+target_type: string
+auto_create: boolean
+required: boolean
+description: string
 ```
 
 ---
 
-## Artifact Types & Naming
+## Artifact Types
 
-Seven types, each persisted as a markdown file under `architecture/` and indexed in the database:
-
-| Type | Folder | Auto-number pattern | Example |
-|---|---|---|---|
+| Type | Folder | Number Pattern | Example |
+|------|--------|----------------|---------|
 | `adr` | `architecture/decisions/` | `ADR-{level:03d}-{seq:03d}` | `ADR-003-001` |
 | `rfc` | `architecture/rfcs/` | `RFC-{year}-{seq:03d}` | `RFC-2026-001` |
 | `evidence` | `architecture/evidence/` | `EVI-{year}-{seq:03d}` | `EVI-2026-001` |
@@ -186,182 +254,189 @@ Seven types, each persisted as a markdown file under `architecture/` and indexed
 | `visibility` | `architecture/visibility/` | `VIS-{seq:03d}` | `VIS-001` |
 | `uncommon` | `architecture/uncommon/` | `UNC-{year}-{seq:03d}` | `UNC-2026-001` |
 
-Pass `"artifact_number": "auto"` to have it generated. Once assigned, `artifact_number` is **immutable**.
+### Number Generation Logic
 
-On `discontinued` status: file moves to `architecture/discontinued/` and `file_path` updates in DB.
-
-Each type has a markdown template in its `templates/` subfolder. Supported placeholders: `{{ARTIFACT_NUMBER}}`, `{{TITLE}}`, `{{DATE}}`, `{{SQUAD}}`, `{{STATUS}}`, `{{TRIGGERED_BY}}`, `{{TRIGGERED_BY_TITLE}}`, `{{LEVEL}}`, `{{AUTHOR}}`.
+```mermaid
+flowchart TD
+    Start[Create Artifact] --> Type{Artifact Type?}
+    
+    Type -->|ADR| ADR[Generate ADR Number]
+    ADR --> Level[Get level-specific sequence]
+    ADR --> Format[Format: ADR-{level}-{seq}]
+    
+    Type -->|RFC| RFC[Generate RFC Number]
+    RFC --> Year[Use current year]
+    RFC --> RSeq[Get year-specific sequence]
+    RFC --> RFormat[Format: RFC-{year}-{seq}]
+    
+    Type -->|Other| Other[Generate Generic Number]
+    Other --> OSeq[Get type-specific sequence]
+    Other --> OFormat[Format: {PREFIX}-{seq}]
+    
+    Format --> Done[Return Number]
+    RFormat --> Done
+    OFormat --> Done
+```
 
 ---
 
 ## ADR Level System
 
-`level` only applies to `artifact_type=adr`. Each level adds validation requirements:
+### Level Definitions
 
 ```mermaid
 flowchart LR
-    L1["**Level 1**<br/>Operational<br/>Sophie decides"]
-    L2["**Level 2**<br/>Component<br/>Sophie decides"]
-    L3["**Level 3**<br/>Platform<br/>Thiago approves<br/>─────────────<br/>rfc_status required"]
-    L4["**Level 4**<br/>Strategic<br/>Thiago + Silvana<br/>─────────────<br/>+ tco_estimate<br/>+ lgpd_analysis"]
-    L5["**Level 5**<br/>Principle<br/>Org-wide<br/>Semestral review<br/>─────────────<br/>+ health_compliance<br/>_impact optional"]
-
-    L1 --- L2 --- L3 --- L4 --- L5
+    L1["Level 1<br/>Operational<br/>Sophie decides"]
+    L2["Level 2<br/>Component<br/>Sophie decides"]
+    L3["Level 3<br/>Platform<br/>Thiago approves"]
+    L4["Level 4<br/>Strategic<br/>Thiago + Silvana"]
+    L5["Level 5<br/>Principle<br/>Org-wide"]
+    
+    L1 --> L2 --> L3 --> L4 --> L5
 ```
 
-| Level | Approver | Required fields |
-|---|---|---|
+### Validation Requirements
+
+| Level | Approver | Required Fields |
+|-------|----------|-----------------|
 | 1–2 | Sophie | — |
 | 3 | Thiago | `rfc_status` |
 | 4–5 | Thiago + Silvana | `rfc_status`, `tco_estimate`, `lgpd_analysis` |
 
+### Compliance Fields
+- **TCO Estimate**: Total Cost of Ownership (levels 4-5)
+- **LGPD Analysis**: Brazilian GDPR compliance (levels 4-5)
+- **Health Compliance Impact**: Healthcare regulations (level 5 optional)
+
 ---
 
-## Status State Machine
+## Status Management
+
+### State Machine
 
 ```mermaid
 stateDiagram-v2
     [*] --> proposed
-
+    
     proposed --> accepted   : approve
     proposed --> rejected   : reject
-
-    accepted --> superseded  : new artifact replaces it<br/>(requires superseded_by)
+    
+    accepted --> superseded  : replace
     accepted --> discontinued : retire
-
+    
     rejected --> reopened   : reconsider
-
+    
     reopened --> accepted   : approve
     reopened --> rejected   : reject again
-
-    superseded  --> [*] : terminal
-    discontinued --> [*] : terminal
+    
+    superseded  --> [*]
+    discontinued --> [*]
 ```
 
-- `superseded` requires `superseded_by` field (artifact number of the replacement)
-- `rejected` requires `rejection_reason`
-- Terminal states cannot transition to anything
+### Status Rules
+- **superseded**: Requires `superseded_by` field
+- **rejected**: Requires `rejection_reason`
+- **discontinued**: File moves to `architecture/discontinued/`
+- Terminal states (`superseded`, `discontinued`) cannot transition
 
 ---
 
 ## Trigger System
 
-Rules define automatic relationships between artifact types, evaluated on every status change.
+### Rule Types
 
 ```mermaid
 flowchart LR
-    ADR3["ADR · level ≥ 3"]         -->|"required<br/>blocks accepted<br/>without linked RFC"| RFC
-    ADR4["ADR · level ≥ 4"]         -->|suggested| EVI[Evidence]
-    ADR5["ADR · level = 5"]         -->|"auto-creates<br/>Governance doc"| GOV[Governance]
-    RFCA["RFC · status = accepted"] -->|notify| ADRUPD["ADR update<br/>suggested"]
+    ADR3["ADR Level ≥ 3"] -->|required| RFC
+    ADR4["ADR Level ≥ 4"] -->|suggested| Evidence
+    ADR5["ADR Level = 5"] -->|auto-create| Governance
+    RFCA["RFC Accepted"] -->|notify| ADRUpdate
 ```
 
-| Source | Condition | Target | Auto-create | Required |
-|---|---|---|---|---|
-| `adr` | `level >= 3` | `rfc` | No | **Yes** — blocks `accepted` if no RFC linked |
-| `adr` | `level >= 4` | `evidence` | No | No |
-| `adr` | `level == 5` | `governance` | **Yes** | No |
-| `rfc` | `status == 'accepted'` | `adr` | No | No |
-
-### Evaluation Flow
+### Evaluation Engine
 
 ```mermaid
 flowchart TD
-    PATCH["PATCH /status"]
-    LOAD["Load trigger rules<br/>for source_type"]
-    EVAL["evaluate_condition()<br/>safe AST — whitelist only"]
-    MET{condition<br/>met?}
-    REQ{required?}
-    AUTO{auto_create?}
-    BLOCK["ValueError:<br/>required trigger<br/>not satisfied"]
-    CREATE["INSERT target artifact<br/>with triggered_by_id"]
-    REF["INSERT artifact_reference<br/>both directions"]
-    OK["Status updated ✓"]
-
-    PATCH --> LOAD --> EVAL --> MET
-    MET -->|No| REQ
-    REQ -->|Yes| BLOCK
-    REQ -->|No| OK
-    MET -->|Yes| AUTO
-    AUTO -->|Yes| CREATE --> REF --> OK
-    AUTO -->|No| OK
+    Start[Status Update] --> Load[Load Rules]
+    Load --> Eval[Evaluate Condition]
+    Eval --> Met{Condition Met?}
+    
+    Met -->|No| Required{Required?}
+    Required -->|Yes| Block[Block Update]
+    Required -->|No| OK[Allow Update]
+    
+    Met -->|Yes| Auto{Auto-create?}
+    Auto -->|Yes| Create[Create Artifact]
+    Create --> Ref[Create Reference]
+    Ref --> OK
+    
+    Auto -->|No| OK
 ```
 
-Safe eval whitelist: `level`, `status`, `artifact_type` with operators `==`, `!=`, `>=`, `<=`, `>`, `<`, `and`, `or`, `not`. No `eval()` on user input — AST validation rejects any dangerous pattern.
+### Safe Condition Evaluation
+- **AST-based parsing**: No `eval()` on user input
+- **Whitelisted operators**: `==`, `!=`, `>=`, `<=`, `>`, `<`, `and`, `or`, `not`
+- **Allowed attributes**: `level`, `status`, `artifact_type`, `title`, `content`
+- **Security**: Rejects dangerous patterns during AST validation
 
 ---
 
 ## API Reference
 
-### Artifacts — `/api/artifacts`
+### Base URL
+```
+http://localhost:8000
+```
+
+### Authentication
+*Currently none (planned: JWT + role-based access)*
+
+### Artifacts (`/api/artifacts`)
 
 | Method | Path | Description |
-|---|---|---|
-| `GET` | `/api/artifacts/` | List all (filter: `artifact_type`, `status`, `squad_id`, `level`) |
+|--------|------|-------------|
+| `GET` | `/api/artifacts/` | List artifacts (filter by type, status, squad, level) |
 | `POST` | `/api/artifacts/` | Create artifact |
-| `GET` | `/api/artifacts/search` | Full-text search in title + content |
-| `GET` | `/api/artifacts/types` | List valid artifact types |
-| `GET` | `/api/artifacts/statuses` | List valid statuses |
+| `GET` | `/api/artifacts/search` | Full-text search |
 | `GET` | `/api/artifacts/{id}` | Get by ID |
-| `PUT` | `/api/artifacts/{id}` | Update fields |
-| `DELETE` | `/api/artifacts/{id}` | Delete |
-| `PATCH` | `/api/artifacts/{id}/status` | Update status + trigger evaluation |
+| `PUT` | `/api/artifacts/{id}` | Update artifact |
+| `DELETE` | `/api/artifacts/{id}` | Delete artifact |
+| `PATCH` | `/api/artifacts/{id}/status` | Update status (triggers evaluation) |
 | `GET` | `/api/artifacts/{id}/file` | Download markdown file |
 
-### Squads — `/api/squads`
+### Squads (`/api/squads`)
 
 | Method | Path | Description |
-|---|---|---|
-| `POST` | `/api/squads/` | Create |
-| `GET` | `/api/squads/` | List |
+|--------|------|-------------|
+| `POST` | `/api/squads/` | Create squad |
+| `GET` | `/api/squads/` | List squads |
 | `GET` | `/api/squads/{code}` | Get by code |
-| `PATCH` | `/api/squads/{code}` | Update |
+| `PATCH` | `/api/squads/{code}` | Update squad |
 | `DELETE` | `/api/squads/{code}` | Soft delete |
-| `GET` | `/api/squads/{code}/artifacts` | All artifacts for squad |
+| `GET` | `/api/squads/{code}/artifacts` | Squad artifacts |
 
-### Trigger Rules — `/api/triggers`
+### Triggers (`/api/triggers`)
 
 | Method | Path | Description |
-|---|---|---|
-| `GET` | `/api/triggers/` | List (filter: `source_type`, `target_type`) |
+|--------|------|-------------|
+| `GET` | `/api/triggers/` | List rules (filter by source/target type) |
 | `POST` | `/api/triggers/` | Create rule |
 | `GET` | `/api/triggers/{id}` | Get rule |
 | `PUT` | `/api/triggers/{id}` | Update rule |
 | `DELETE` | `/api/triggers/{id}` | Delete rule |
-| `POST` | `/api/triggers/test-evaluate` | Evaluate condition against a given artifact |
-| `GET` | `/api/triggers/suggestions/{artifact_id}` | Suggestions for an artifact |
+| `POST` | `/api/triggers/test-evaluate` | Test condition evaluation |
+| `GET` | `/api/triggers/suggestions/{id}` | Get suggestions for artifact |
 
-### Health — `/api/health`
+### Health (`/api/health`)
 
 | Method | Path | Description |
-|---|---|---|
+|--------|------|-------------|
 | `GET` | `/api/health/` | Full ecosystem analysis |
-| `GET` | `/api/health/readiness` | Database + filesystem ready check |
+| `GET` | `/api/health/readiness` | Database + filesystem check |
 | `GET` | `/api/health/liveness` | Process alive check |
 | `GET` | `/api/health/metrics` | Counts by type and status |
 
-Health response:
-
-```json
-{
-  "generated_at": "2026-04-08T12:00:00",
-  "summary": {
-    "total_artifacts": 42,
-    "by_type": { "adr": 18, "rfc": 9, "evidence": 6 },
-    "by_status": { "proposed": 12, "accepted": 24, "rejected": 6 }
-  },
-  "issues": [
-    {
-      "severity": "HIGH",
-      "artifact_number": "ADR-003-001",
-      "issue": "Level 3 ADR accepted without linked RFC",
-      "recommendation": "Create RFC-2026-001 referencing ADR-003-001"
-    }
-  ]
-}
-```
-
-### Create Artifact — Example
+### Example: Create ADR
 
 ```http
 POST /api/artifacts/
@@ -379,6 +454,7 @@ Content-Type: application/json
 }
 ```
 
+Response:
 ```json
 {
   "id": 7,
@@ -389,8 +465,7 @@ Content-Type: application/json
   "status": "proposed",
   "file_path": "architecture/decisions/ADR-003-001.md",
   "squad_name": "Platform Team",
-  "created_at": "2026-04-08T12:00:00",
-  "updated_at": "2026-04-08T12:00:00"
+  "created_at": "2026-04-08T12:00:00Z"
 }
 ```
 
@@ -401,77 +476,97 @@ Content-Type: application/json
 ```
 adr_hub/
 ├── src/
-│   ├── api/
-│   │   ├── artifacts.py        # Artifact CRUD + status + file download
-│   │   ├── squads.py           # Squad CRUD + squad artifacts
-│   │   ├── trigger_rules.py    # Trigger rule CRUD + test-evaluate
-│   │   └── health.py           # Readiness · liveness · metrics · analysis
-│   ├── models/
-│   │   ├── artifact.py         # Artifact + Create/Update/StatusUpdate/Read
+│   ├── api/                    # API Layer
+│   │   ├── artifacts.py        # Artifact endpoints
+│   │   ├── squads.py           # Squad endpoints
+│   │   ├── trigger_rules.py    # Trigger endpoints
+│   │   └── health.py           # Health endpoints
+│   ├── models/                 # Models Layer
+│   │   ├── artifact.py         # Artifact models
 │   │   ├── artifact_reference.py
-│   │   ├── squad.py
-│   │   └── trigger_rule.py
-│   ├── services/
-│   │   ├── artifact_service.py # CRUD · auto-numbering · file generation
-│   │   ├── squad_service.py
-│   │   ├── trigger_service.py  # Safe AST condition eval · auto-create
-│   │   ├── template_service.py # Template load · placeholder substitution
-│   │   └── health_service.py   # Ecosystem analysis
-│   ├── database/
-│   │   └── engine.py           # Engine · session factory · create_all
-│   └── main.py                 # App · routers · on_startup
-├── tests/
-│   ├── conftest.py             # session · client · test_squad_data · test_artifact_data
-│   ├── test_artifacts.py       # ArtifactService unit tests (~36)
-│   ├── test_api_artifacts.py   # API integration tests
-│   ├── test_squads.py          # Squad tests
-│   ├── test_triggers.py        # Trigger evaluation
-│   ├── test_templates.py       # Template service
-│   ├── test_health.py          # Health endpoints
-│   ├── test_schema.py          # Model validation
-│   └── test_with_subprocess.py # Import smoke tests (7)
-├── architecture/
-│   ├── decisions/templates/    # ADR templates level 1–5
-│   ├── rfcs/templates/
-│   ├── evidence/templates/
-│   ├── governance/templates/
-│   ├── implementation/templates/
-│   ├── visibility/templates/
-│   ├── uncommon/templates/
-│   └── discontinued/           # Files land here on discontinued status
+│   │   ├── squad.py           # Squad models
+│   │   └── trigger_rule.py    # Trigger models
+│   ├── services/              # Service Layer
+│   │   ├── artifact_service.py # Artifact business logic
+│   │   ├── squad_service.py   # Squad business logic
+│   │   ├── trigger_service.py # Trigger evaluation
+│   │   ├── template_service.py # Template rendering
+│   │   └── health_service.py  # Health monitoring
+│   ├── database/              # Data Access
+│   │   └── engine.py          # Database engine
+│   └── main.py                # FastAPI application
+├── tests/                     # Test Suite
+│   ├── conftest.py           # Test fixtures
+│   ├── test_artifacts.py     # Artifact service tests
+│   ├── test_api_artifacts.py # API integration tests
+│   ├── test_squads.py        # Squad tests
+│   ├── test_triggers.py      # Trigger tests
+│   ├── test_templates.py     # Template tests
+│   ├── test_health.py        # Health tests
+│   ├── test_schema.py        # Model validation tests
+│   └── test_with_subprocess.py # Import smoke tests
+├── architecture/             # Generated Artifacts
+│   ├── decisions/           # ADR markdown files
+│   ├── rfcs/               # RFC markdown files
+│   ├── evidence/           # Evidence markdown files
+│   ├── governance/         # Governance markdown files
+│   ├── implementation/     # Implementation markdown files
+│   ├── visibility/        # Visibility markdown files
+│   ├── uncommon/          # Uncommon markdown files
+│   └── discontinued/      # Discontinued artifacts
+├── templates/              # Markdown Templates
+│   ├── decisions/         # ADR templates (levels 1-5)
+│   ├── rfcs/             # RFC templates
+│   ├── evidence/         # Evidence templates
+│   ├── governance/       # Governance templates
+│   ├── implementation/   # Implementation templates
+│   ├── visibility/      # Visibility templates
+│   └── uncommon/        # Uncommon templates
 ├── locale/
-│   └── governance.db           # SQLite production database
-├── main.py                     # Entry point
-├── requirements.txt
-├── pytest.ini
-└── .github/workflows/ci.yml
+│   └── governance.db    # SQLite database
+├── main.py              # Application entry point
+├── requirements.txt     # Python dependencies
+├── pytest.ini          # Test configuration
+└── .github/workflows/   # CI/CD Pipeline
+    └── ci.yml          # GitHub Actions workflow
 
 ---
 
 ## Quick Start
 
+### Local Development
+
 ```bash
+# Clone repository
 git clone https://github.com/sophie-pyxis/adr_hub.git
 cd adr_hub
 
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 
+# Run application
 uvicorn main:app --reload
 ```
 
-| URL | Description |
-|---|---|
-| `http://localhost:8000` | Root |
-| `http://localhost:8000/docs` | Swagger UI |
-| `http://localhost:8000/redoc` | ReDoc |
+### Access Points
 
-**Environment variable** (optional):
+| URL | Description |
+|-----|-------------|
+| `http://localhost:8000` | Root endpoint |
+| `http://localhost:8000/docs` | Swagger UI |
+| `http://localhost:8000/redoc` | ReDoc documentation |
+
+### Environment Configuration
 
 ```env
+# SQLite (default)
 DATABASE_URL=sqlite:///./locale/governance.db
-# PostgreSQL:
+
+# PostgreSQL
 # DATABASE_URL=postgresql://user:password@localhost/adr_hub
 ```
 
@@ -479,78 +574,71 @@ DATABASE_URL=sqlite:///./locale/governance.db
 
 ## Testing
 
-Every test gets a fresh in-memory SQLite database. No real filesystem access in unit tests — template tests use `tmp_path`. No hardcoded paths anywhere.
+### Test Architecture
+
+```mermaid
+flowchart LR
+    CF[conftest.py<br/>Fixtures] --> TA[test_artifacts.py<br/>Service Tests]
+    CF --> TAA[test_api_artifacts.py<br/>API Tests]
+    CF --> TS[test_squads.py<br/>Squad Tests]
+    CF --> TT[test_triggers.py<br/>Trigger Tests]
+    CF --> TH[test_health.py<br/>Health Tests]
+```
+
+### Running Tests
 
 ```bash
-# Full suite
+# Full test suite with coverage
 pytest tests/ -v --cov=src --cov-report=term-missing
 
-# Single file
+# Single test file
 pytest tests/test_artifacts.py -v
 
-# Single test
+# Specific test
 pytest tests/test_artifacts.py::test_create_artifact_with_auto_number -v
 ```
 
-### Test Layout
-
-```mermaid
-flowchart LR
-    CF["conftest.py<br/>session fixture<br/>client fixture<br/>test data factories"]
-
-    CF --> TA["test_artifacts.py<br/>ArtifactService unit"]
-    CF --> TAA["test_api_artifacts.py<br/>API integration"]
-    CF --> TS["test_squads.py"]
-    CF --> TT["test_triggers.py<br/>safe AST eval<br/>auto-create flow"]
-    CF --> TTEM["test_templates.py<br/>tmp_path isolation"]
-    CF --> TH["test_health.py"]
-    CF --> TSC["test_schema.py<br/>model validation"]
-    CF --> TWS["test_with_subprocess.py<br/>import smoke tests"]
-```
-
 ### Test Coverage
-
-- **Overall Coverage**: 74%
-- **Key Service Coverage**:
-  - `artifact_service.py`: 7%
-  - `squad_service.py`: 36%
-  - `template_service.py`: 16%
-  - `trigger_service.py`: 17%
-  - `health_service.py`: 25%
-  - API endpoints: 46-53%
+- **Overall Coverage**: 74% (minimum requirement)
+- **Key Services**: ArtifactService (7%), SquadService (36%), TriggerService (17%)
+- **API Endpoints**: 46-53% coverage
 
 ---
 
-## CI/CD
+## CI/CD Pipeline
+
+### Pipeline Flow
 
 ```mermaid
 flowchart LR
-    PR["push / PR"] --> T
-    T["test<br/>Python 3.9 · 3.10 · 3.11<br/>pytest + coverage"] --> L
-    L["lint<br/>Black · Flake8<br/>isort · mypy"] --> S
-    S["security<br/>Bandit · Safety"] --> OK["✅ green"]
+    PR[Push/PR] --> Test[Test<br/>Python 3.9-3.11]
+    Test --> Lint[Lint<br/>Black · Flake8 · isort · mypy]
+    Lint --> Security[Security<br/>Bandit · Safety]
+    Security --> Pass[✅ Pipeline Passes]
 ```
 
-### GitHub Actions Pipeline
+### GitHub Actions Jobs
 
-Located in `.github/workflows/ci.yml`:
+| Job | Description | Tools |
+|-----|-------------|-------|
+| **test** | Run tests on Python 3.9, 3.10, 3.11 | pytest, coverage |
+| **lint** | Code quality checks | Black, Flake8, isort, mypy |
+| **security** | Security scanning | Bandit, Safety |
 
-| Job | Description |
-|---|---|
-| **test** | Runs tests on Python 3.9, 3.10, 3.11 with 74% coverage |
-| **lint** | Code formatting (Black), linting (Flake8), imports (isort), types (mypy) |
-| **security** | Security scanning (Bandit) and dependency checks (Safety) |
-
-### Pipeline Features
-- **Matrix testing**: Multiple Python versions
-- **Coverage upload**: Codecov integration
-- **Quality gates**: 74% test coverage required
-- **Security scanning**: Proactive vulnerability detection
+### Quality Gates
+- **Test Coverage**: Minimum 74% required
+- **Code Formatting**: Black compliance (88 char line length)
+- **Import Sorting**: isort with Black profile
+- **Type Checking**: mypy with strict settings
+- **Security**: Bandit scanning for vulnerabilities
 
 ---
 
-## Docker Deployment
+## Deployment
 
+### Docker Deployment
+
+**Dockerfile**:
 ```dockerfile
 FROM python:3.11-slim
 WORKDIR /app
@@ -560,6 +648,7 @@ COPY . .
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
+**docker-compose.yml**:
 ```yaml
 services:
   api:
@@ -568,6 +657,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:password@db/adr_hub
     depends_on: [db]
+  
   db:
     image: postgres:15
     environment:
@@ -575,27 +665,46 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     volumes: [postgres_data:/var/lib/postgresql/data]
+
 volumes:
   postgres_data:
 ```
+
+### Production Considerations
+
+1. **Database**: Use PostgreSQL for production workloads
+2. **File Storage**: Cloud storage (S3, Azure Blob) for markdown files
+3. **Caching**: Redis for frequently accessed data
+4. **Monitoring**: Prometheus metrics, structured logging
+5. **Security**: JWT authentication, rate limiting, CORS restrictions
 
 ---
 
 ## Roadmap
 
-- [ ] JWT auth + role-based access (Architect / TechLead / Viewer)
+### Short-term (Q2 2026)
+- [ ] JWT authentication with role-based access (Architect/TechLead/Viewer)
 - [ ] Webhook notifications on status changes
-- [ ] Export to PDF
+- [ ] Export to PDF functionality
 - [ ] Alembic migrations for PostgreSQL
-- [ ] `@app.on_event` → `lifespan` (FastAPI modern pattern)
-- [ ] `class Config` → `model_config = ConfigDict(...)` (Pydantic v2 full migration)
-- [ ] Rate limiting
+
+### Medium-term (Q3 2026)
+- [ ] Modern FastAPI patterns (`lifespan` instead of `on_event`)
+- [ ] Pydantic v2 full migration (`model_config` pattern)
+- [ ] Rate limiting and API throttling
+- [ ] Advanced search with Elasticsearch integration
+
+### Long-term (Q4 2026+)
+- [ ] GraphQL API alongside REST
+- [ ] Real-time collaboration features
+- [ ] Machine learning for artifact suggestions
+- [ ] Integration with project management tools (Jira, Linear)
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT License — see [LICENSE](LICENSE) file for details.
 
 ---
 
