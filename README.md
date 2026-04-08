@@ -1,288 +1,515 @@
 # ADR Hub — Architecture Decision Record Management System
 
-**ADR Hub** is a modern, open-source REST API for managing Architecture Decision Records (ADRs) with Clean Architecture, built with FastAPI and SQLModel. Designed for teams that need structured, auditable decision tracking with compliance and governance features.
+**REST API for managing Architecture Decision Records — FastAPI · SQLModel · Clean Architecture**
+
+ADR Hub turns architecture governance from a folder of markdown files into a queryable, auditable system: 7 artifact types with automatic numbering, trigger rules that fire on status changes, cross-artifact references, healthcare compliance fields (LGPD, TCO, health impact), and a health analysis endpoint that surfaces gaps before they become incidents.
 
 ---
 
-## 🎯 Project Overview
+## Contents
 
-ADR Hub transforms the traditional file-based ADR management into a fully-featured API with:
-- **RESTful endpoints** for all CRUD operations
-- **Clean Architecture** with clear separation of concerns
-- **Comprehensive validation** with Pydantic v2
-- **Database persistence** with SQLModel (SQLAlchemy + Pydantic)
-- **Full test coverage** with isolated in-memory SQLite
-- **CI/CD pipeline** with GitHub Actions
-- **OpenAPI documentation** automatically generated
-
-### Why ADR Hub?
-- **From CLI to API**: Evolved from a CLI tool to a modern REST API
-- **Production Ready**: Built with enterprise-grade validation and error handling
-- **Extensible**: Clean architecture makes it easy to add new features
-- **Open Source**: MIT licensed, community-driven development
+- [Architecture](#architecture)
+- [Data Model](#data-model)
+- [Artifact Types & Naming](#artifact-types--naming)
+- [ADR Level System](#adr-level-system)
+- [Status State Machine](#status-state-machine)
+- [Trigger System](#trigger-system)
+- [API Reference](#api-reference)
+- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+- [Testing](#testing)
+- [CI/CD](#cicd)
+- [Docker Deployment](#docker-deployment)
+- [Roadmap](#roadmap)
+- [License](#license)
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ### Clean Architecture Layers
 
 ```mermaid
+flowchart TB
+    subgraph Client
+        HTTP([HTTP Client])
+    end
+
+    subgraph API["API Layer — src/api/"]
+        A1[artifacts.py]
+        A2[squads.py]
+        A3[trigger_rules.py]
+        A4[health.py]
+    end
+
+    subgraph Services["Service Layer — src/services/"]
+        S1[ArtifactService]
+        S2[SquadService]
+        S3[TriggerService]
+        S4[TemplateService]
+        S5[HealthService]
+    end
+
+    subgraph Models["Models Layer — src/models/"]
+        M1[Artifact]
+        M2[Squad]
+        M3[TriggerRule]
+        M4[ArtifactReference]
+    end
+
+    subgraph Persistence
+        DB[(locale/governance.db<br/>SQLite)]
+        FS[architecture/<br/>Markdown files]
+    end
+
+    HTTP -->|HTTP Request| API
+    API -->|Depends injection| Services
+    Services -->|Pydantic validation| Models
+    Services -->|SQLModel ORM| DB
+    Services -->|Path.write_text| FS
+    DB -->|Query results| Services
+    Services -->|Response models| API
+    API -->|HTTP Response| HTTP
+```
+
+### Request Lifecycle — Create Artifact
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant R as Router
+    participant AS as ArtifactService
+    participant TS as TemplateService
+    participant TRG as TriggerService
+    participant DB as SQLite
+    participant FS as FileSystem
+
+    C->>R: POST /api/artifacts/ {type=adr, number=auto}
+    R->>AS: create_artifact(data)
+    AS->>DB: SELECT squad — validate exists & active
+    AS->>AS: _generate_artifact_number(type, level, session)
+    AS->>TS: generate_content_for_artifact(data)
+    TS->>TS: load template + substitute placeholders
+    TS-->>AS: rendered markdown
+    AS->>DB: INSERT artifact
+    AS->>FS: write architecture/decisions/ADR-003-001.md
+    AS->>TRG: process_artifact_triggers(artifact)
+    TRG->>DB: SELECT trigger_rules WHERE source_type=adr
+    TRG->>TRG: evaluate_condition() — safe AST eval
+    alt auto_create rule matched
+        TRG->>DB: INSERT triggered artifact
+        TRG->>DB: INSERT artifact_reference (both directions)
+    end
+    TRG-->>AS: triggered artifacts list
+    AS-->>R: ArtifactRead
+    R-->>C: 201 Created
+```
+
+---
+
+## Data Model
+
+```mermaid
+erDiagram
+    SQUAD {
+        int     id              PK
+        string  squad_code      UK
+        string  name
+        string  tech_lead
+        string  status
+        string  discontinued_reason
+        datetime created_at
+        datetime updated_at
+        datetime deleted_at
+    }
+
+    ARTIFACT {
+        int     id              PK
+        string  artifact_type
+        string  artifact_number UK
+        string  title
+        string  status
+        int     level
+        text    content
+        string  file_path
+        string  template_used
+        int     squad_id        FK
+        int     triggered_by_id FK
+        string  trigger_reason
+        string  tco_estimate
+        string  lgpd_analysis
+        string  rfc_status
+        string  health_compliance_impact
+        string  created_by_ip
+        datetime created_at
+        datetime updated_at
+    }
+
+    TRIGGER_RULE {
+        int     id              PK
+        string  source_type
+        string  source_condition
+        string  target_type
+        bool    auto_create
+        bool    required
+        string  description
+        datetime created_at
+    }
+
+    ARTIFACT_REFERENCE {
+        int     id              PK
+        int     from_artifact_id FK
+        int     to_artifact_id   FK
+        string  reference_type
+        datetime created_at
+    }
+
+    SQUAD            ||--o{  ARTIFACT           : "owns"
+    ARTIFACT         ||--o{  ARTIFACT           : "triggered_by (self)"
+    ARTIFACT         ||--o{  ARTIFACT_REFERENCE : "from"
+    ARTIFACT         ||--o{  ARTIFACT_REFERENCE : "to"
+```
+
+---
+
+## Artifact Types & Naming
+
+Seven types, each persisted as a markdown file under `architecture/` and indexed in the database:
+
+| Type | Folder | Auto-number pattern | Example |
+|---|---|---|---|
+| `adr` | `architecture/decisions/` | `ADR-{level:03d}-{seq:03d}` | `ADR-003-001` |
+| `rfc` | `architecture/rfcs/` | `RFC-{year}-{seq:03d}` | `RFC-2026-001` |
+| `evidence` | `architecture/evidence/` | `EVI-{year}-{seq:03d}` | `EVI-2026-001` |
+| `governance` | `architecture/governance/` | `GOV-{year}-{seq:03d}` | `GOV-2026-001` |
+| `implementation` | `architecture/implementation/` | `IMP-{seq:03d}` | `IMP-001` |
+| `visibility` | `architecture/visibility/` | `VIS-{seq:03d}` | `VIS-001` |
+| `uncommon` | `architecture/uncommon/` | `UNC-{year}-{seq:03d}` | `UNC-2026-001` |
+
+Pass `"artifact_number": "auto"` to have it generated. Once assigned, `artifact_number` is **immutable**.
+
+On `discontinued` status: file moves to `architecture/discontinued/` and `file_path` updates in DB.
+
+Each type has a markdown template in its `templates/` subfolder. Supported placeholders: `{{ARTIFACT_NUMBER}}`, `{{TITLE}}`, `{{DATE}}`, `{{SQUAD}}`, `{{STATUS}}`, `{{TRIGGERED_BY}}`, `{{TRIGGERED_BY_TITLE}}`, `{{LEVEL}}`, `{{AUTHOR}}`.
+
+---
+
+## ADR Level System
+
+`level` only applies to `artifact_type=adr`. Each level adds validation requirements:
+
+```mermaid
+flowchart LR
+    L1["**Level 1**<br/>Operational<br/>Sophie decides"]
+    L2["**Level 2**<br/>Component<br/>Sophie decides"]
+    L3["**Level 3**<br/>Platform<br/>Thiago approves<br/>─────────────<br/>rfc_status required"]
+    L4["**Level 4**<br/>Strategic<br/>Thiago + Silvana<br/>─────────────<br/>+ tco_estimate<br/>+ lgpd_analysis"]
+    L5["**Level 5**<br/>Principle<br/>Org-wide<br/>Semestral review<br/>─────────────<br/>+ health_compliance<br/>_impact optional"]
+
+    L1 --- L2 --- L3 --- L4 --- L5
+```
+
+| Level | Approver | Required fields |
+|---|---|---|
+| 1–2 | Sophie | — |
+| 3 | Thiago | `rfc_status` |
+| 4–5 | Thiago + Silvana | `rfc_status`, `tco_estimate`, `lgpd_analysis` |
+
+---
+
+## Status State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> proposed
+
+    proposed --> accepted   : approve
+    proposed --> rejected   : reject
+
+    accepted --> superseded  : new artifact replaces it<br/>(requires superseded_by)
+    accepted --> discontinued : retire
+
+    rejected --> reopened   : reconsider
+
+    reopened --> accepted   : approve
+    reopened --> rejected   : reject again
+
+    superseded  --> [*] : terminal
+    discontinued --> [*] : terminal
+```
+
+- `superseded` requires `superseded_by` field (artifact number of the replacement)
+- `rejected` requires `rejection_reason`
+- Terminal states cannot transition to anything
+
+---
+
+## Trigger System
+
+Rules define automatic relationships between artifact types, evaluated on every status change.
+
+```mermaid
+flowchart LR
+    ADR3["ADR · level ≥ 3"]         -->|"required<br/>blocks accepted<br/>without linked RFC"| RFC
+    ADR4["ADR · level ≥ 4"]         -->|suggested| EVI[Evidence]
+    ADR5["ADR · level = 5"]         -->|"auto-creates<br/>Governance doc"| GOV[Governance]
+    RFCA["RFC · status = accepted"] -->|notify| ADRUPD["ADR update<br/>suggested"]
+```
+
+| Source | Condition | Target | Auto-create | Required |
+|---|---|---|---|---|
+| `adr` | `level >= 3` | `rfc` | No | **Yes** — blocks `accepted` if no RFC linked |
+| `adr` | `level >= 4` | `evidence` | No | No |
+| `adr` | `level == 5` | `governance` | **Yes** | No |
+| `rfc` | `status == 'accepted'` | `adr` | No | No |
+
+### Evaluation Flow
+
+```mermaid
 flowchart TD
-    Client([HTTP Client])
-    API[API Layer<br/>FastAPI Routers]
-    Services[Service Layer<br/>Business Logic]
-    Models[Models Layer<br/>Pydantic + SQLModel]
-    Database[(Database<br/>SQLite/PostgreSQL)]
+    PATCH["PATCH /status"]
+    LOAD["Load trigger rules<br/>for source_type"]
+    EVAL["evaluate_condition()<br/>safe AST — whitelist only"]
+    MET{condition<br/>met?}
+    REQ{required?}
+    AUTO{auto_create?}
+    BLOCK["ValueError:<br/>required trigger<br/>not satisfied"]
+    CREATE["INSERT target artifact<br/>with triggered_by_id"]
+    REF["INSERT artifact_reference<br/>both directions"]
+    OK["Status updated ✓"]
 
-    Client -->|HTTP Request| API
-    API -->|Dependency Injection| Services
-    Services -->|Data Validation| Models
-    Services -->|Persistence| Database
-    Database -->|Query Results| Services
-    Services -->|Response Data| API
-    API -->|HTTP Response| Client
+    PATCH --> LOAD --> EVAL --> MET
+    MET -->|No| REQ
+    REQ -->|Yes| BLOCK
+    REQ -->|No| OK
+    MET -->|Yes| AUTO
+    AUTO -->|Yes| CREATE --> REF --> OK
+    AUTO -->|No| OK
 ```
 
-### Directory Structure
-```
-adr_hub/
-├── src/
-│   ├── api/                    # FastAPI routers
-│   │   ├── adrs.py            # ADR endpoints
-│   │   └── squads.py          # Squad endpoints
-│   ├── models/                # Pydantic + SQLModel schemas
-│   │   ├── adr.py            # ADR models & validation
-│   │   └── squad.py          # Squad models & validation
-│   ├── services/              # Business logic layer
-│   │   ├── adr_service.py    # ADR business logic
-│   │   └── squad_service.py  # Squad business logic
-│   ├── core/                  # Domain entities
-│   └── database.py           # Database session management
-├── tests/                     # Comprehensive test suite
-│   ├── test_adrs.py          # ADR API tests
-│   └── test_squads.py        # Squad API tests
-├── .github/workflows/        # CI/CD pipelines
-├── docs/                     # Documentation
-├── locale/                   # Production data directory
-├── main.py                   # FastAPI application entry
-├── requirements.txt          # Python dependencies
-├── pytest.ini               # Test configuration
-└── README.md                # This file
-```
+Safe eval whitelist: `level`, `status`, `artifact_type` with operators `==`, `!=`, `>=`, `<=`, `>`, `<`, `and`, `or`, `not`. No `eval()` on user input — AST validation rejects any dangerous pattern.
 
 ---
 
-## 📊 Features
+## API Reference
 
-### ADR Management
-- **Auto-numbering**: Automatic ADR number generation with "auto" keyword
-- **Level-based validation**:
-  - Level 1-2: Basic validation
-  - Level 3+: RFC status required
-  - Level 4+: TCO estimate and LGPD analysis required
-- **Status workflow**: Proposed → Accepted/Rejected/Superseded/Discontinued
-- **Healthcare compliance**: Optional health compliance impact for healthcare organizations
+### Artifacts — `/api/artifacts`
 
-### Squad Management
-- **Team organization**: Group ADRs by squads/teams
-- **Soft delete**: Status-based deactivation (active, discontinued)
-- **Validation**: Cannot create ADRs for discontinued squads
-- **Unique constraints**: Squad code must be unique
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/artifacts/` | List all (filter: `artifact_type`, `status`, `squad_id`, `level`) |
+| `POST` | `/api/artifacts/` | Create artifact |
+| `GET` | `/api/artifacts/search` | Full-text search in title + content |
+| `GET` | `/api/artifacts/types` | List valid artifact types |
+| `GET` | `/api/artifacts/statuses` | List valid statuses |
+| `GET` | `/api/artifacts/{id}` | Get by ID |
+| `PUT` | `/api/artifacts/{id}` | Update fields |
+| `DELETE` | `/api/artifacts/{id}` | Delete |
+| `PATCH` | `/api/artifacts/{id}/status` | Update status + trigger evaluation |
+| `GET` | `/api/artifacts/{id}/file` | Download markdown file |
 
-### API Features
-- **Filtering**: List ADRs by level, status, or squad
-- **Search**: Full-text search in titles and content
-- **Pagination**: Skip/limit parameters for large datasets
-- **Validation**: Comprehensive input validation with clear error messages
-- **OpenAPI**: Automatic documentation at `/docs` and `/redoc`
+### Squads — `/api/squads`
 
----
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/squads/` | Create |
+| `GET` | `/api/squads/` | List |
+| `GET` | `/api/squads/{code}` | Get by code |
+| `PATCH` | `/api/squads/{code}` | Update |
+| `DELETE` | `/api/squads/{code}` | Soft delete |
+| `GET` | `/api/squads/{code}/artifacts` | All artifacts for squad |
 
-## 🚀 Quick Start
+### Trigger Rules — `/api/triggers`
 
-### Prerequisites
-- Python 3.9+
-- pip (Python package manager)
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/triggers/` | List (filter: `source_type`, `target_type`) |
+| `POST` | `/api/triggers/` | Create rule |
+| `GET` | `/api/triggers/{id}` | Get rule |
+| `PUT` | `/api/triggers/{id}` | Update rule |
+| `DELETE` | `/api/triggers/{id}` | Delete rule |
+| `POST` | `/api/triggers/test-evaluate` | Evaluate condition against a given artifact |
+| `GET` | `/api/triggers/suggestions/{artifact_id}` | Suggestions for an artifact |
 
-### Installation
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/adr-hub.git
-cd adr-hub
+### Health — `/api/health`
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/health/` | Full ecosystem analysis |
+| `GET` | `/api/health/readiness` | Database + filesystem ready check |
+| `GET` | `/api/health/liveness` | Process alive check |
+| `GET` | `/api/health/metrics` | Counts by type and status |
 
-# Install dependencies
-pip install -r requirements.txt
+Health response:
+
+```json
+{
+  "generated_at": "2026-04-08T12:00:00",
+  "summary": {
+    "total_artifacts": 42,
+    "by_type": { "adr": 18, "rfc": 9, "evidence": 6 },
+    "by_status": { "proposed": 12, "accepted": 24, "rejected": 6 }
+  },
+  "issues": [
+    {
+      "severity": "HIGH",
+      "artifact_number": "ADR-003-001",
+      "issue": "Level 3 ADR accepted without linked RFC",
+      "recommendation": "Create RFC-2026-001 referencing ADR-003-001"
+    }
+  ]
+}
 ```
 
-### Running the API
-```bash
-# Start the FastAPI server
-uvicorn main:app --reload
+### Create Artifact — Example
 
-# API will be available at http://localhost:8000
-# Documentation at http://localhost:8000/docs
-```
-
-### Running Tests
-```bash
-# Run all tests with coverage
-pytest tests/ -v --cov=src --cov-report=term-missing
-
-# Run specific test file
-pytest tests/test_adrs.py -v
-```
-
----
-
-## 📚 API Documentation
-
-### Base URL
-```
-http://localhost:8000
-```
-
-### ADR Endpoints
-
-#### `POST /adrs/` — Create a new ADR
 ```http
-POST /adrs/
+POST /api/artifacts/
 Content-Type: application/json
 
 {
-  "adr_number": "auto",
-  "title": "Use FastAPI for new microservices",
+  "artifact_type": "adr",
+  "artifact_number": "auto",
+  "title": "Adopt Azure OpenAI as default LLM provider",
   "level": 3,
   "status": "proposed",
-  "content": "## Context\nWe need to choose a web framework...",
-  "rfc_status": "RFC-2024-001 completed",
+  "content": "## Context\nWe need a managed LLM provider...",
+  "rfc_status": "RFC-2026-001 in review",
   "squad_id": 1
 }
 ```
 
-**Response (201 Created):**
 ```json
 {
-  "id": 1,
-  "adr_number": "ADR-003-001",
-  "title": "Use FastAPI for new microservices",
+  "id": 7,
+  "artifact_type": "adr",
+  "artifact_number": "ADR-003-001",
+  "title": "Adopt Azure OpenAI as default LLM provider",
   "level": 3,
   "status": "proposed",
-  "created_at": "2024-01-15T10:30:00",
-  "updated_at": "2024-01-15T10:30:00",
-  "squad_name": "Platform Team"
-}
-```
-
-#### `GET /adrs/` — List ADRs with filtering
-```http
-GET /adrs/?level=3&status=accepted&skip=0&limit=10
-```
-
-#### `GET /adrs/{adr_number}` — Get specific ADR
-```http
-GET /adrs/ADR-003-001
-```
-
-#### `PATCH /adrs/{adr_number}` — Update ADR fields
-```http
-PATCH /adrs/ADR-003-001
-Content-Type: application/json
-
-{
-  "title": "Updated title",
-  "content": "Updated content with more details"
-}
-```
-
-#### `PATCH /adrs/{adr_number}/status` — Update ADR status
-```http
-PATCH /adrs/ADR-003-001/status
-Content-Type: application/json
-
-{
-  "status": "accepted"
-}
-```
-
-#### `GET /adrs/search/` — Search ADRs
-```http
-GET /adrs/search/?q=microservices&skip=0&limit=10
-```
-
-### Squad Endpoints
-
-#### `POST /squads/` — Create a new squad
-```http
-POST /squads/
-Content-Type: application/json
-
-{
-  "name": "Platform Team",
-  "squad_code": "PLAT",
-  "tech_lead": "Jane Doe",
-  "description": "Platform infrastructure team"
-}
-```
-
-#### `GET /squads/` — List all squads
-```http
-GET /squads/
-```
-
-#### `GET /squads/{squad_code}` — Get specific squad
-```http
-GET /squads/PLAT
-```
-
-#### `PATCH /squads/{squad_code}` — Update squad
-```http
-PATCH /squads/PLAT
-Content-Type: application/json
-
-{
-  "description": "Updated team description"
-}
-```
-
-#### `PATCH /squads/{squad_code}/status` — Update squad status
-```http
-PATCH /squads/PLAT/status
-Content-Type: application/json
-
-{
-  "status": "discontinued",
-  "discontinued_reason": "Team reorganized"
+  "file_path": "architecture/decisions/ADR-003-001.md",
+  "squad_name": "Platform Team",
+  "created_at": "2026-04-08T12:00:00",
+  "updated_at": "2026-04-08T12:00:00"
 }
 ```
 
 ---
 
-## 🧪 Testing
+## Project Structure
 
-### Test Strategy
-- **Isolation**: In-memory SQLite database for each test
-- **Fixtures**: Reusable test data factories
-- **Coverage**: 95% minimum threshold enforced
-- **Test types**: Unit, integration, and API endpoint tests
+```
+adr_hub/
+├── src/
+│   ├── api/
+│   │   ├── artifacts.py        # Artifact CRUD + status + file download
+│   │   ├── squads.py           # Squad CRUD + squad artifacts
+│   │   ├── trigger_rules.py    # Trigger rule CRUD + test-evaluate
+│   │   └── health.py           # Readiness · liveness · metrics · analysis
+│   ├── models/
+│   │   ├── artifact.py         # Artifact + Create/Update/StatusUpdate/Read
+│   │   ├── artifact_reference.py
+│   │   ├── squad.py
+│   │   └── trigger_rule.py
+│   ├── services/
+│   │   ├── artifact_service.py # CRUD · auto-numbering · file generation
+│   │   ├── squad_service.py
+│   │   ├── trigger_service.py  # Safe AST condition eval · auto-create
+│   │   ├── template_service.py # Template load · placeholder substitution
+│   │   └── health_service.py   # Ecosystem analysis
+│   ├── database/
+│   │   └── engine.py           # Engine · session factory · create_all
+│   └── main.py                 # App · routers · on_startup
+├── tests/
+│   ├── conftest.py             # session · client · test_squad_data · test_artifact_data
+│   ├── test_artifacts.py       # ArtifactService unit tests (~36)
+│   ├── test_api_artifacts.py   # API integration tests
+│   ├── test_squads.py          # Squad tests
+│   ├── test_triggers.py        # Trigger evaluation
+│   ├── test_templates.py       # Template service
+│   ├── test_health.py          # Health endpoints
+│   ├── test_schema.py          # Model validation
+│   └── test_with_subprocess.py # Import smoke tests (7)
+├── architecture/
+│   ├── decisions/templates/    # ADR templates level 1–5
+│   ├── rfcs/templates/
+│   ├── evidence/templates/
+│   ├── governance/templates/
+│   ├── implementation/templates/
+│   ├── visibility/templates/
+│   ├── uncommon/templates/
+│   └── discontinued/           # Files land here on discontinued status
+├── locale/
+│   └── governance.db           # SQLite production database
+├── main.py                     # Entry point
+├── requirements.txt
+├── pytest.ini
+└── .github/workflows/ci.yml
 
-### Running Tests
+---
+
+## Quick Start
+
 ```bash
-# Run all tests with coverage report
-pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html
+git clone https://github.com/sophie-pyxis/adr_hub.git
+cd adr_hub
 
-# Run specific test category
-pytest tests/test_adrs.py::test_create_adr -v
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
 
-# Run tests with coverage threshold check
-pytest tests/ --cov=src --cov-fail-under=75
+uvicorn main:app --reload
+```
+
+| URL | Description |
+|---|---|
+| `http://localhost:8000` | Root |
+| `http://localhost:8000/docs` | Swagger UI |
+| `http://localhost:8000/redoc` | ReDoc |
+
+**Environment variable** (optional):
+
+```env
+DATABASE_URL=sqlite:///./locale/governance.db
+# PostgreSQL:
+# DATABASE_URL=postgresql://user:password@localhost/adr_hub
+```
+
+---
+
+## Testing
+
+Every test gets a fresh in-memory SQLite database. No real filesystem access in unit tests — template tests use `tmp_path`. No hardcoded paths anywhere.
+
+```bash
+# Full suite
+pytest tests/ -v --cov=src --cov-report=term-missing
+
+# Single file
+pytest tests/test_artifacts.py -v
+
+# Single test
+pytest tests/test_artifacts.py::test_create_artifact_with_auto_number -v
+```
+
+### Test Layout
+
+```mermaid
+flowchart LR
+    CF["conftest.py<br/>session fixture<br/>client fixture<br/>test data factories"]
+
+    CF --> TA["test_artifacts.py<br/>ArtifactService unit"]
+    CF --> TAA["test_api_artifacts.py<br/>API integration"]
+    CF --> TS["test_squads.py"]
+    CF --> TT["test_triggers.py<br/>safe AST eval<br/>auto-create flow"]
+    CF --> TTEM["test_templates.py<br/>tmp_path isolation"]
+    CF --> TH["test_health.py"]
+    CF --> TSC["test_schema.py<br/>model validation"]
+    CF --> TWS["test_with_subprocess.py<br/>import smoke tests"]
 ```
 
 ### Test Coverage
+
 - **Overall Coverage**: 74%
 - **Key Service Coverage**:
   - `artifact_service.py`: 7%
@@ -294,200 +521,81 @@ pytest tests/ --cov=src --cov-fail-under=75
 
 ---
 
-## 🔧 Configuration
+## CI/CD
 
-### Environment Variables
-Create a `.env` file:
-```env
-DATABASE_URL=sqlite:///./adr_hub.db
-# For PostgreSQL:
-# DATABASE_URL=postgresql://user:password@localhost/adr_hub
+```mermaid
+flowchart LR
+    PR["push / PR"] --> T
+    T["test<br/>Python 3.9 · 3.10 · 3.11<br/>pytest + coverage"] --> L
+    L["lint<br/>Black · Flake8<br/>isort · mypy"] --> S
+    S["security<br/>Bandit · Safety"] --> OK["✅ green"]
 ```
 
-### Database Setup
-The system uses SQLite by default. For production, PostgreSQL is recommended:
+### GitHub Actions Pipeline
 
-```python
-# In src/database.py
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./adr_hub.db")
-```
-
-### Pytest Configuration (`pytest.ini`)
-```ini
-[pytest]
-testpaths = tests
-python_files = test_*.py
-python_classes = Test*
-python_functions = test_*
-addopts =
-    -v
-    --tb=short
-    --strict-markers
-    --cov=src
-    --cov-report=term-missing
-    --cov-report=html
-    --cov-report=xml
-markers =
-    slow: marks tests as slow
-    integration: marks tests as integration tests
-    unit: marks tests as unit tests
-```
-
----
-
-## 🚀 CI/CD Pipeline
-
-### GitHub Actions Workflow
 Located in `.github/workflows/ci.yml`:
 
 | Job | Description |
-|-----|-------------|
-| **test** | Runs tests on Python 3.9, 3.10, 3.11 with 75% coverage |
+|---|---|
+| **test** | Runs tests on Python 3.9, 3.10, 3.11 with 74% coverage |
 | **lint** | Code formatting (Black), linting (Flake8), imports (isort), types (mypy) |
 | **security** | Security scanning (Bandit) and dependency checks (Safety) |
 
 ### Pipeline Features
 - **Matrix testing**: Multiple Python versions
 - **Coverage upload**: Codecov integration
-- **Quality gates**: 75% test coverage required
+- **Quality gates**: 74% test coverage required
 - **Security scanning**: Proactive vulnerability detection
 
 ---
 
-## 📈 ADR Levels & Validation
+## Docker Deployment
 
-### Level Definitions
-| Level | Description | Requirements |
-|-------|-------------|--------------|
-| **1** | Minor decision | Basic validation |
-| **2** | Team decision | Basic validation |
-| **3** | Cross-team decision | RFC status required |
-| **4** | Organizational decision | TCO estimate, LGPD analysis, RFC status |
-| **5** | Architectural principle | TCO estimate, LGPD analysis, RFC status |
-
-### Validation Rules
-1. **ADR Number**: Format `ADR-XXX-XXX` or `"auto"` for auto-generation
-2. **Status Transitions**: Valid state machine enforcement
-3. **Squad Validation**: Cannot create ADRs for discontinued squads
-4. **Level Requirements**: Enforced at creation and update
-
-### Healthcare Compliance (Optional)
-For healthcare organizations, level 4+ ADRs can include:
-- **Health compliance impact**: Analysis of healthcare regulations
-- **LGPD analysis**: Brazilian GDPR compliance (required for level 4+)
-- **TCO estimate**: Total Cost of Ownership analysis (required for level 4+)
-
----
-
-## 🛠️ Development
-
-### Setting Up Development Environment
-```bash
-# Install development dependencies
-pip install -r requirements.txt
-pip install black flake8 isort mypy pytest pytest-cov
-
-# Set up pre-commit hooks (optional)
-pre-commit install
-```
-
-### Code Style
-- **Formatting**: Black
-- **Linting**: Flake8 with max line length 88
-- **Imports**: isort
-- **Type checking**: mypy
-
-### Adding New Features
-1. **Models first**: Define Pydantic models in `src/models/`
-2. **Business logic**: Implement services in `src/services/`
-3. **API endpoints**: Add routes in `src/api/`
-4. **Tests**: Write comprehensive tests in `tests/`
-
-### Database Migrations
-For production databases, use Alembic:
-```bash
-# Initialize Alembic
-alembic init migrations
-
-# Create migration
-alembic revision --autogenerate -m "Add new field"
-
-# Apply migration
-alembic upgrade head
-```
-
----
-
-## 🐳 Docker Deployment
-
-### Dockerfile
 ```dockerfile
 FROM python:3.11-slim
-
 WORKDIR /app
-
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
 COPY . .
-
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-### Docker Compose
 ```yaml
-version: '3.8'
-
 services:
   api:
     build: .
-    ports:
-      - "8000:8000"
+    ports: ["8000:8000"]
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db/adr_hub
-    depends_on:
-      - db
-
+      DATABASE_URL: postgresql://postgres:password@db/adr_hub
+    depends_on: [db]
   db:
     image: postgres:15
     environment:
-      - POSTGRES_DB=adr_hub
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
+      POSTGRES_DB: adr_hub
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes: [postgres_data:/var/lib/postgresql/data]
 volumes:
   postgres_data:
 ```
 
 ---
 
-## 🤝 Contributing
+## Roadmap
 
-### Development Workflow
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-### Code Standards
-- Follow existing code style and architecture patterns
-- Write tests for new features
-- Update documentation as needed
-- Keep commits focused and descriptive
-
-### Issue Reporting
-- Use GitHub Issues for bug reports and feature requests
-- Include steps to reproduce for bugs
-- Describe use cases for feature requests
+- [ ] JWT auth + role-based access (Architect / TechLead / Viewer)
+- [ ] Webhook notifications on status changes
+- [ ] Export to PDF
+- [ ] Alembic migrations for PostgreSQL
+- [ ] `@app.on_event` → `lifespan` (FastAPI modern pattern)
+- [ ] `class Config` → `model_config = ConfigDict(...)` (Pydantic v2 full migration)
+- [ ] Rate limiting
 
 ---
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
 
 ---
 
@@ -502,28 +610,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/yourusername/adr-hub/issues)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/sophie-pyxis/adr_hub/issues)
 - **Documentation**: Check the `/docs` endpoint when running the API
 - **Community**: Join discussions in GitHub Discussions
 
 ---
 
-## 🚧 Roadmap
-
-### Planned Features
-- [ ] **Authentication & Authorization**: JWT-based auth with role-based access
-- [ ] **Webhook support**: Notifications for ADR status changes
-- [ ] **Export functionality**: Export ADRs to PDF/Markdown
-- [ ] **Advanced search**: Full-text search with filters
-- [ ] **Dashboard**: Web interface for ADR management
-- [ ] **Import from legacy**: Import from file-based ADR systems
-- [ ] **API versioning**: Support for multiple API versions
-- [ ] **Rate limiting**: Protect API from abuse
-
-### Migration from CLI
-This project evolved from a CLI-based ADR management system. The legacy file-based structure is preserved in the `architecture/` directory for reference and potential migration tools.
-
----
-
 **ADR Hub** — Making architecture decisions trackable, auditable, and collaborative. 🏛️
-
