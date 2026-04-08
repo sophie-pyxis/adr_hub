@@ -528,6 +528,7 @@ adr_hub/
 ├── main.py              # Application entry point
 ├── requirements.txt     # Python dependencies
 ├── pytest.ini          # Test configuration
+├── SOLUTIONS_ARCHITECT_HANDBOOK.md  # Solutions Architect Handbook
 └── .github/workflows/   # CI/CD Pipeline
     └── ci.yml          # GitHub Actions workflow
 
@@ -730,6 +731,7 @@ MIT License — see [LICENSE](LICENSE) file for details.
 - **SQLModel** for combining SQLAlchemy and Pydantic
 - **Pydantic** for robust data validation
 - **The ADR community** for establishing best practices
+- **Scarlet Rose** for insights on solutions architecture from her YouTube channel: [LinkedIn](https://www.linkedin.com/in/scarletrose/) | [GitHub](https://github.com/scarletquasar) | [YouTube](https://www.youtube.com/watch?v=MYq4v6S8BHE)
 
 ---
 
@@ -742,3 +744,6 @@ MIT License — see [LICENSE](LICENSE) file for details.
 ---
 
 **ADR Hub** — Making architecture decisions trackable, auditable, and collaborative. 🏛️
+
+**Created by**: Sophie Pyxis ([LinkedIn](https://www.linkedin.com/in/sophie-pyxis) | [GitHub](https://github.com/sophie-pyxis))  
+**Repository**: https://github.com/sophie-pyxis/adr_hub

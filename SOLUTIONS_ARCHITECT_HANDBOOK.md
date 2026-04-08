@@ -1125,7 +1125,17 @@ The ADR Hub currently provides:
 
 ---
 
+## Acknowledgments
+
+Special thanks to:
+
+- **Scarlet Rose**, Solutions Architect at Itaú, for sharing valuable insights about solutions architecture through her YouTube channel and social media
+- **The FastAPI community** for creating an excellent framework
+- **The ADR community** for establishing best practices in architecture decision documentation
+
+---
+
 **ADR Hub Solutions Architect Handbook** — Version 1.0.0  
+Created by: Sophie Pyxis ([LinkedIn](https://www.linkedin.com/in/sophie-pyxis) | [GitHub](https://github.com/sophie-pyxis))  
 Last Updated: 2026-04-08  
-Maintainer: Architecture Governance Team  
-© 2026 ADR Hub Project. All rights reserved.
+© 2026 Sophie Pyxis. All rights reserved.
