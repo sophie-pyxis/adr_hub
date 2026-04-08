@@ -55,42 +55,40 @@ ADR Hub provides a unified platform for managing 7 types of architecture artifac
 ## 3. Technical Architecture
 
 ### 3.1 System Architecture
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Client Applications                      │
-│  (Web UI, CLI, CI/CD pipelines, Integration tools)          │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ HTTPS/REST
-┌──────────────────────────────▼──────────────────────────────┐
-│                    API Layer (FastAPI)                       │
-│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌──────────┐ │
-│  │ Artifacts  │ │   Squads   │ │  Triggers  │ │  Health  │ │
-│  │   API      │ │    API     │ │    API     │ │   API    │ │
-│  └────────────┘ └────────────┘ └────────────┘ └──────────┘ │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ Dependency Injection
-┌──────────────────────────────▼──────────────────────────────┐
-│                   Service Layer (Business Logic)             │
-│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌──────────┐ │
-│  │ Artifact   │ │   Squad    │ │  Trigger   │ │ Template │ │
-│  │  Service   │ │   Service  │ │  Service   │ │ Service  │ │
-│  └────────────┘ └────────────┘ └────────────┘ └──────────┘ │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ Data Access
-┌──────────────────────────────▼──────────────────────────────┐
-│                   Data Layer (SQLModel)                      │
-│  ┌────────────┐ ┌────────────┐ ┌────────────┐              │
-│  │ Artifact   │ │   Squad    │ │  Trigger   │              │
-│  │  Models    │ │   Models   │ │   Models   │              │
-│  └────────────┘ └────────────┘ └────────────┘              │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ ORM/Queries
-┌──────────────────────────────▼──────────────────────────────┐
-│                   Storage Layer                              │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  Database (SQLite/PostgreSQL) + File System          │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+
+```mermaid
+flowchart TD
+    Client[Client Applications<br/>Web UI, CLI, CI/CD pipelines, Integration tools]
+    
+    subgraph API["API Layer (FastAPI)"]
+        A1[Artifacts API]
+        A2[Squads API]
+        A3[Triggers API]
+        A4[Health API]
+    end
+    
+    subgraph Services["Service Layer (Business Logic)"]
+        S1[Artifact Service]
+        S2[Squad Service]
+        S3[Trigger Service]
+        S4[Template Service]
+    end
+    
+    subgraph Models["Data Layer (SQLModel)"]
+        M1[Artifact Models]
+        M2[Squad Models]
+        M3[Trigger Models]
+    end
+    
+    subgraph Storage["Storage Layer"]
+        DB[(Database<br/>SQLite/PostgreSQL)]
+        FS[File System]
+    end
+    
+    Client -- HTTPS/REST --> API
+    API -- Dependency Injection --> Services
+    Services -- Data Access --> Models
+    Models -- ORM/Queries --> Storage
 ```
 
 ### 3.2 Component Responsibilities
@@ -117,28 +115,49 @@ ADR Hub provides a unified platform for managing 7 types of architecture artifac
 ### 3.3 Data Flow Patterns
 
 #### 3.3.1 Artifact Creation Flow
-```
-1. Client → API: POST /api/artifacts with artifact data
-2. API → ArtifactService: Validate input, generate artifact number
-3. ArtifactService → Database: Create artifact record
-4. ArtifactService → TemplateService: Render markdown template
-5. TemplateService → File System: Write markdown file
-6. ArtifactService → TriggerService: Evaluate trigger rules
-7. TriggerService → Database: Create related artifacts (if conditions met)
-8. API → Client: Return created artifact with file path
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant ArtifactService
+    participant Database
+    participant TemplateService
+    participant FileSystem
+    participant TriggerService
+    
+    Client->>API: POST /api/artifacts
+    API->>ArtifactService: Validate input, generate artifact number
+    ArtifactService->>Database: Create artifact record
+    ArtifactService->>TemplateService: Render markdown template
+    TemplateService->>FileSystem: Write markdown file
+    ArtifactService->>TriggerService: Evaluate trigger rules
+    alt Condition Met
+        TriggerService->>Database: Create related artifacts
+    end
+    API->>Client: Return created artifact with file path
 ```
 
 #### 3.3.2 Trigger Evaluation Flow
-```
-1. Event (status change, creation) → TriggerService
-2. Load relevant trigger rules from database
-3. Parse condition using AST (Abstract Syntax Tree)
-4. Evaluate condition against artifact attributes
-5. If condition met and auto_create=True:
-   a. Create related artifact
-   b. Create reference records
-   c. Generate notifications
-6. Return evaluation results
+
+```mermaid
+flowchart TD
+    Start["Event: status change or creation"] --> Load[Load trigger rules from database]
+    Load --> Parse[Parse condition using AST]
+    Parse --> Evaluate[Evaluate condition against artifact attributes]
+    Evaluate --> Condition{Condition met?}
+    
+    Condition -->|No| Required{Auto-create required?}
+    Required -->|Yes| Block[Block operation]
+    Required -->|No| Allow[Allow operation]
+    
+    Condition -->|Yes| Auto{Auto-create enabled?}
+    Auto -->|No| Allow
+    
+    Auto -->|Yes| Create[Create related artifact]
+    Create --> References[Create reference records]
+    References --> Notifications[Generate notifications]
+    Notifications --> Allow
 ```
 
 ---
@@ -159,31 +178,16 @@ ADR Hub provides a unified platform for managing 7 types of architecture artifac
 ### 4.2 ADR Level System
 
 #### 4.2.1 Level Definitions
-```
-Level 1: Operational Decisions
-  - Scope: Team/component level
-  - Approver: Tech Lead
-  - Impact: Low, reversible
 
-Level 2: Component Decisions  
-  - Scope: Multiple components
-  - Approver: Tech Lead
-  - Impact: Medium, requires coordination
-
-Level 3: Platform Decisions
-  - Scope: Platform/services
-  - Approver: Architect
-  - Requirements: RFC status tracking
-
-Level 4: Strategic Decisions
-  - Scope: Business unit/division
-  - Approvers: Architect + Business Manager
-  - Requirements: TCO estimate, LGPD analysis
-
-Level 5: Principle Decisions
-  - Scope: Organization-wide
-  - Approvers: Architect + Business Manager + Legal
-  - Requirements: All compliance fields
+```mermaid
+flowchart TD
+    L1["Level 1: Operational Decisions<br/>Scope: Team/component level<br/>Approver: Tech Lead<br/>Impact: Low, reversible"]
+    L2["Level 2: Component Decisions<br/>Scope: Multiple components<br/>Approver: Tech Lead<br/>Impact: Medium, requires coordination"]
+    L3["Level 3: Platform Decisions<br/>Scope: Platform/services<br/>Approver: Architect<br/>Requirements: RFC status tracking"]
+    L4["Level 4: Strategic Decisions<br/>Scope: Business unit/division<br/>Approvers: Architect + Business Manager<br/>Requirements: TCO estimate, LGPD analysis"]
+    L5["Level 5: Principle Decisions<br/>Scope: Organization-wide<br/>Approvers: Architect + Business Manager + Legal<br/>Requirements: All compliance fields"]
+    
+    L1 --> L2 --> L3 --> L4 --> L5
 ```
 
 #### 4.2.2 Validation Matrix
@@ -348,26 +352,33 @@ volumes:
 ```
 
 ### 6.3 High Availability Architecture
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Load Balancer (HAProxy/Nginx)            │
-│                        SSL Termination                       │
-└──────────────┬──────────────────────────────┬───────────────┘
-               │                              │
-    ┌──────────▼──────────┐        ┌─────────▼──────────┐
-    │   API Instance 1    │        │   API Instance 2   │
-    │   Region: us-east-1 │        │   Region: us-west-2│
-    └──────────┬──────────┘        └─────────┬──────────┘
-               │                              │
-    ┌──────────▼──────────┐        ┌─────────▼──────────┐
-    │      Redis Cluster  │        │   Read Replica     │
-    │    (Primary/Replica)│        │   PostgreSQL       │
-    └──────────┬──────────┘        └─────────┬──────────┘
-               │                              │
-    ┌──────────▼──────────────────────────────▼──────────┐
-    │           PostgreSQL Primary (Multi-AZ)            │
-    │             Automated Backups to S3                │
-    └────────────────────────────────────────────────────┘
+
+```mermaid
+flowchart TD
+    LB[Load Balancer<br/>HAProxy/Nginx with SSL Termination]
+    
+    subgraph Region1["Region: us-east-1"]
+        API1[API Instance 1]
+        Redis1[Redis Cluster<br/>Primary/Replica]
+    end
+    
+    subgraph Region2["Region: us-west-2"]
+        API2[API Instance 2]
+        PG2[PostgreSQL Read Replica]
+    end
+    
+    subgraph Database["Database Layer"]
+        PGPrimary[PostgreSQL Primary<br/>Multi-AZ Deployment]
+        S3[Automated Backups to S3]
+    end
+    
+    LB --> API1
+    LB --> API2
+    API1 --> Redis1
+    API2 --> PG2
+    Redis1 --> PGPrimary
+    PG2 --> PGPrimary
+    PGPrimary --> S3
 ```
 
 ### 6.4 Disaster Recovery

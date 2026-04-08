@@ -24,6 +24,7 @@ ADR Hub transforms architecture governance from scattered markdown files into a 
 - [Deployment](#deployment)
 - [Roadmap](#roadmap)
 - [License](#license)
+- [Solutions Architect Handbook](#solutions-architect-handbook)
 
 ---
 
@@ -699,6 +700,21 @@ volumes:
 - [ ] Real-time collaboration features
 - [ ] Machine learning for artifact suggestions
 - [ ] Integration with project management tools (Jira, Linear)
+
+---
+
+## Solutions Architect Handbook
+
+For comprehensive guidance on implementing, operating, and extending ADR Hub in enterprise environments, refer to the [Solutions Architect Handbook](SOLUTIONS_ARCHITECT_HANDBOOK.md).
+
+The handbook provides detailed information for solution architects and enterprise architects, including:
+
+- **Enterprise Architecture Patterns**: Detailed system architecture with Mermaid diagrams
+- **Deployment Strategies**: Development, production, and high-availability configurations
+- **Security Architecture**: Authentication, authorization, and compliance controls
+- **Monitoring & Observability**: Health checks, metrics, logging, and alerting
+- **Operational Procedures**: Deployment, backup, incident response, and capacity planning
+- **Extension & Customization**: Plugin architecture and integration patterns
 
 ---
 
