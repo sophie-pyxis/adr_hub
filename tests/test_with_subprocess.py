@@ -1,6 +1,5 @@
 """
 Test basic imports work correctly from the project root.
-Replaces the old subprocess-based debug script.
 """
 
 import sys
@@ -8,19 +7,18 @@ from pathlib import Path
 
 import pytest
 
-
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 
 
 def test_project_root_is_correct():
     """Verify PROJECT_ROOT resolves to the adr_hub folder."""
-    assert (PROJECT_ROOT / "src").exists(), f"src/ not found under {PROJECT_ROOT}"
-    assert (PROJECT_ROOT / "tests").exists(), f"tests/ not found under {PROJECT_ROOT}"
+    assert (PROJECT_ROOT / "src").exists()
+    assert (PROJECT_ROOT / "tests").exists()
 
 
 def test_sqlmodel_importable():
     """SQLModel must be installed and importable."""
-    import sqlmodel  # noqa: F401
+    import sqlmodel
 
     assert sqlmodel is not None
 
