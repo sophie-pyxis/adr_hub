@@ -59,7 +59,13 @@ def test_services_importable():
     )
 
     assert all(
-        [SquadService, TemplateService, ArtifactService, TriggerService, HealthService]
+        [
+            SquadService,
+            TemplateService,
+            ArtifactService,
+            TriggerService,
+            HealthService,
+        ]
     )
 
 
