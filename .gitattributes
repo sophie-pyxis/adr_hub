@@ -1,0 +1,31 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Python files should use LF line endings
+*.py text eol=lf
+
+# Shell scripts should use LF line endings
+*.sh text eol=lf
+
+# Markdown files should use LF line endings
+*.md text eol=lf
+
+# YAML files should use LF line endings
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# JSON files should use LF line endings
+*.json text eol=lf
+
+# Text files should use LF line endings
+*.txt text eol=lf
+
+# Binary files
+*.db binary
+*.db-journal binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

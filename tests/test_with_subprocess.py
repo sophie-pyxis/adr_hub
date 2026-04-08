@@ -68,7 +68,3 @@ def test_app_importable():
     from src.main import app
 
     assert app is not None
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

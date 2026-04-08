@@ -1,8 +1,8 @@
-#!/usr/bin/env python
 """
 Standalone test runner for trigger service tests.
 Avoids the circular import chain in main conftest.py.
 """
+
 import sys
 import os
 
