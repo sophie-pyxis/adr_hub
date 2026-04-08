@@ -1,0 +1,28 @@
+# ADR Hub - Architecture Decision Record Management System
+# Dependencies for FastAPI REST API with Clean Architecture
+
+# Core API
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Database & ORM
+sqlmodel>=0.0.14
+sqlalchemy>=2.0.0
+
+# Validation & Serialization
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+httpx>=0.25.0
+
+# Existing dependencies
+PyYAML>=6.0.0
+
+# Development
+python-multipart>=0.0.6  # For form data parsing
+
+# Resilience/Circuit Breaker (RFC-012)
+tenacity>=8.2.0
