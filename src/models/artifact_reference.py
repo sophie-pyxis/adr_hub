@@ -45,7 +45,7 @@ class ArtifactReferenceBase(SQLModel):
         return v
 
 
-class ArtifactReference(ArtifactReferenceBase, table=True):
+class ArtifactReference(ArtifactReferenceBase, table=True):  # type: ignore[call-arg]
     """Artifact reference database model."""
 
     id: Optional[int] = Field(default=None, primary_key=True)

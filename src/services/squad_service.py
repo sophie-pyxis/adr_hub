@@ -106,7 +106,7 @@ class SquadService:
             query = query.where(Squad.status == status)
 
         # Exclude soft-deleted squads (deleted_at is not null)
-        query = query.where(Squad.deleted_at.is_(None))
+        query = query.where(Squad.deleted_at.is_(None))  # type: ignore[attr-defined]
 
         query = query.offset(skip).limit(limit)
 

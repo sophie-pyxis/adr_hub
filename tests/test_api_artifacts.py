@@ -344,7 +344,7 @@ def test_search_artifacts_by_type(client, session):
         mock_service.search_artifacts.return_value = mock_artifacts
         MockArtifactService.return_value = mock_service
 
-        response = client.get("/api/artifacts/search?artifact_type=adr")
+        response = client.get("/api/artifacts/search?q=test&artifact_type=adr")
 
     assert response.status_code == 200
     data = response.json()
@@ -374,7 +374,7 @@ def test_search_artifacts_by_squad(client, session):
         mock_service.search_artifacts.return_value = mock_artifacts
         MockArtifactService.return_value = mock_service
 
-        response = client.get("/api/artifacts/search?squad_id=1")
+        response = client.get("/api/artifacts/search?q=test&squad_id=1")
 
     assert response.status_code == 200
     data = response.json()
@@ -404,7 +404,7 @@ def test_search_artifacts_by_status(client, session):
         mock_service.search_artifacts.return_value = mock_artifacts
         MockArtifactService.return_value = mock_service
 
-        response = client.get("/api/artifacts/search?status=accepted")
+        response = client.get("/api/artifacts/search?q=test&status=accepted")
 
     assert response.status_code == 200
     data = response.json()
@@ -437,7 +437,7 @@ def test_search_artifacts_multiple_filters(client, session):
         MockArtifactService.return_value = mock_service
 
         response = client.get(
-            "/api/artifacts/search?artifact_type=adr&status=accepted&squad_id=1"
+            "/api/artifacts/search?q=test&artifact_type=adr&status=accepted&squad_id=1"
         )
 
     assert response.status_code == 200

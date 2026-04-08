@@ -546,7 +546,7 @@ class TemplateService:
         template_content = self.load_template_content(artifact_type)
         placeholders = self.extract_placeholders(template_content)
 
-        schema = {
+        schema: Dict[str, Any] = {
             "required": [],
             "defaults": {},
             "all_placeholders": list(placeholders),

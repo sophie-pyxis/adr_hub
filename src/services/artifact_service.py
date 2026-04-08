@@ -451,9 +451,14 @@ class ArtifactService:
         artifacts = session.exec(query).all()
 
         # Get squad names for all artifacts
-        squad_ids = {artifact.squad_id for artifact in artifacts}
-        squads = session.exec(select(Squad).where(Squad.id.in_(squad_ids))).all()
-        squad_map = {squad.id: squad.name for squad in squads}
+        squad_ids = {
+            artifact.squad_id for artifact in artifacts if artifact.squad_id is not None
+        }
+        if squad_ids:
+            squads = session.exec(select(Squad).where(Squad.id.in_(squad_ids))).all()
+            squad_map = {squad.id: squad.name for squad in squads}
+        else:
+            squad_map = {}
 
         # Create response objects
         result = []
@@ -631,8 +636,8 @@ class ArtifactService:
 
         sql_query = select(Artifact).where(
             or_(
-                Artifact.title.ilike(search_pattern),
-                Artifact.content.ilike(search_pattern),
+                Artifact.title.ilike(search_pattern),  # type: ignore[attr-defined]
+                Artifact.content.ilike(search_pattern),  # type: ignore[attr-defined]
             )
         )
 
@@ -644,9 +649,14 @@ class ArtifactService:
         artifacts = session.exec(sql_query).all()
 
         # Get squad names
-        squad_ids = {artifact.squad_id for artifact in artifacts}
-        squads = session.exec(select(Squad).where(Squad.id.in_(squad_ids))).all()
-        squad_map = {squad.id: squad.name for squad in squads}
+        squad_ids = {
+            artifact.squad_id for artifact in artifacts if artifact.squad_id is not None
+        }
+        if squad_ids:
+            squads = session.exec(select(Squad).where(Squad.id.in_(squad_ids))).all()
+            squad_map = {squad.id: squad.name for squad in squads}
+        else:
+            squad_map = {}
 
         # Create response objects
         result = []

@@ -20,7 +20,6 @@ from ..models.artifact import (
     ArtifactStatusUpdate,
     ArtifactUpdate,
 )
-from ..models.squad import Squad
 from ..services.artifact_service import ArtifactService
 from ..services.trigger_service import TriggerService
 
@@ -44,15 +43,32 @@ def get_trigger_service(
 def get_artifacts(
     skip: int = 0,
     limit: int = 100,
+    artifact_type: Optional[str] = Query(None, description="Filter by artifact type"),
+    squad_id: Optional[int] = Query(None, description="Filter by squad ID"),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    level: Optional[int] = Query(None, ge=1, le=5, description="Filter by level (1-5)"),
     artifact_service: ArtifactService = Depends(get_artifact_service),
 ):
     """
-    Get all artifacts with pagination.
+    Get artifacts with optional filtering and pagination.
 
     - **skip**: Number of records to skip (for pagination)
     - **limit**: Maximum number of records to return (default: 100)
+    - **artifact_type**: Filter by artifact type (adr, rfc, evidence, governance,
+      implementation, visibility, uncommon)
+    - **squad_id**: Filter by squad ID
+    - **status**: Filter by status (proposed, accepted, rejected, superseded,
+      discontinued)
+    - **level**: Filter by level (1-5)
     """
-    return artifact_service.get_artifacts(skip=skip, limit=limit)
+    return artifact_service.list_artifacts(
+        skip=skip,
+        limit=limit,
+        artifact_type=artifact_type,
+        squad_id=squad_id,
+        status=status,
+        level=level,
+    )
 
 
 @router.post("/", response_model=ArtifactRead, status_code=status.HTTP_201_CREATED)
@@ -64,7 +80,8 @@ def create_artifact(
     """
     Create a new artifact.
 
-    - **artifact_type**: Type of artifact (adr, rfc, evidence, governance, implementation, visibility, uncommon)
+    - **artifact_type**: Type of artifact (adr, rfc, evidence, governance,
+      implementation, visibility, uncommon)
     - **artifact_number**: Artifact number (use "auto" for auto-generation)
     - **title**: Title of the artifact
     - **level**: Artifact level (1-5, required for certain types)
@@ -98,23 +115,21 @@ def create_artifact(
 
 @router.get("/search", response_model=List[ArtifactRead])
 def search_artifacts(
+    q: str = Query(..., description="Search query for title or content"),
     artifact_type: Optional[str] = Query(None, description="Filter by artifact type"),
-    squad_id: Optional[int] = Query(None, description="Filter by squad ID"),
-    status: Optional[str] = Query(None, description="Filter by status"),
-    level: Optional[int] = Query(None, ge=1, le=5, description="Filter by level (1-5)"),
+    skip: int = 0,
+    limit: int = 100,
     artifact_service: ArtifactService = Depends(get_artifact_service),
 ):
     """
-    Search artifacts with filtering.
+    Search artifacts by title or content.
 
-    - **artifact_type**: Filter by artifact type (adr, rfc, evidence, governance, implementation, visibility, uncommon)
-    - **squad_id**: Filter by squad ID
-    - **status**: Filter by status (proposed, accepted, rejected, superseded, discontinued)
-    - **level**: Filter by level (1-5)
+    - **q**: Search query (required)
+    - **artifact_type**: Optional filter by artifact type
     """
     try:
         return artifact_service.search_artifacts(
-            artifact_type=artifact_type, squad_id=squad_id, status=status, level=level
+            query=q, artifact_type=artifact_type, skip=skip, limit=limit
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -227,7 +242,8 @@ def update_artifact_status(
 
     - **artifact_id**: ID of the artifact to update
     - **status**: New artifact status
-    - **superseded_by**: Artifact number that supersedes this one (required for status=superseded)
+    - **superseded_by**: Artifact number that supersedes this one
+      (required for status=superseded)
     - **rejection_reason**: Reason for rejection (required for status=rejected)
     """
     try:

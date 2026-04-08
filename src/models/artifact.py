@@ -211,7 +211,7 @@ class ArtifactBase(SQLModel):
         return self
 
 
-class Artifact(ArtifactBase, table=True):
+class Artifact(ArtifactBase, table=True):  # type: ignore[call-arg]
     """Artifact database model."""
 
     id: Optional[int] = Field(default=None, primary_key=True)

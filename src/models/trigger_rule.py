@@ -108,7 +108,7 @@ class TriggerRuleBase(SQLModel):
         return v
 
 
-class TriggerRule(TriggerRuleBase, table=True):
+class TriggerRule(TriggerRuleBase, table=True):  # type: ignore[call-arg]
     """Trigger rule database model."""
 
     id: Optional[int] = Field(default=None, primary_key=True)

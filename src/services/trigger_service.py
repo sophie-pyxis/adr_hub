@@ -236,7 +236,7 @@ class TriggerService:
             for op, comparator in zip(node.ops, node.comparators):
                 right = self._evaluate_ast_node(comparator, context)
                 op_func = self.safe_operators[type(op)]
-                result = op_func(left, right)
+                result = op_func(left, right)  # type: ignore[operator]
                 results.append(result)
                 left = right  # For chained comparisons
 

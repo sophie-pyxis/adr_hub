@@ -70,7 +70,7 @@ class SquadBase(SQLModel):
         return v
 
 
-class Squad(SquadBase, table=True):
+class Squad(SquadBase, table=True):  # type: ignore[call-arg]
     """Squad database model."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
