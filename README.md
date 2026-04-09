@@ -745,5 +745,5 @@ MIT License — see [LICENSE](LICENSE) file for details.
 
 **ADR Hub** — Making architecture decisions trackable, auditable, and collaborative. 🏛️
 
-**Created by**: {{PRINCIPAL_ARCHITECT}} ([LinkedIn](https://www.linkedin.com/in/sophie-pyxis) | [GitHub](https://github.com/sophie-pyxis))  
+**Created by**: Sophie Pyxis ([LinkedIn](https://www.linkedin.com/in/sophie-pyxis) | [GitHub](https://github.com/sophie-pyxis))  
 **Repository**: https://github.com/sophie-pyxis/adr_hub
