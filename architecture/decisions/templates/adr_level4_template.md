@@ -2,16 +2,16 @@
 title: "[Título da decisão]"
 status: "Proposto"
 date: "YYYY-MM-DD"
-autora: "Sophie Pyxis de Paula"
+autora: "{{PRINCIPAL_ARCHITECT}}"
 level: 4
 level_name: "Estratégico"
-decides: "Sophie propõe"
-approves: "Thiago + Silvana"
-notifies: "Rodrigo, liderança técnica, área relevante de negócio"
+decides: "{{PRINCIPAL_ARCHITECT}} propõe"
+approves: "{{ARCHITECT_MANAGER}} + {{BUSINESS_MANAGER}}"
+notifies: "{{ENGINEERING_MANAGER}}, liderança técnica, área relevante de negócio"
 sla: "apresentação formal antes de documentar"
 reversibility: "Muito difícil"
 revisores: "Tech Leads afetados"
-aprovador: "Thiago + Silvana"
+aprovador: "{{ARCHITECT_MANAGER}} + {{BUSINESS_MANAGER}}"
 impacto_financeiro: "A estimar"
 implicacoes_lgpd: "A avaliar"
 ---
@@ -20,9 +20,9 @@ implicacoes_lgpd: "A avaliar"
 
 **Status:** Proposto
 **Data:** YYYY-MM-DD
-**Autora:** Sophie Pyxis de Paula
+**Autora:** {{PRINCIPAL_ARCHITECT}}
 **Revisores:** Tech Leads afetados
-**Aprovador:** Thiago + Silvana
+**Aprovador:** {{ARCHITECT_MANAGER}} + {{BUSINESS_MANAGER}}
 **Nível:** 4 - Estratégico
 **Princípios aplicáveis:** [referência aos Princípios Nível 5]
 

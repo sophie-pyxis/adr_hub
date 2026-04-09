@@ -2,12 +2,12 @@
 title: "[Título da decisão]"
 status: "Proposto"
 date: "YYYY-MM-DD"
-autora: "Sophie Pyxis de Paula"
+autora: "{{PRINCIPAL_ARCHITECT}}"
 level: 2
 level_name: "Componente"
-decides: "Sophie"
+decides: "{{PRINCIPAL_ARCHITECT}}"
 approves: "— (mas RFC opcional para feedback)"
-notifies: "Tech Leads dos squads afetados + Thiago informalmente"
+notifies: "Tech Leads dos squads afetados + {{ARCHITECT_MANAGER}} informalmente"
 sla: "documenta antes de implementar"
 reversibility: "Moderada"
 squads: "[lista de squads afetados]"
@@ -17,7 +17,7 @@ squads: "[lista de squads afetados]"
 
 **Status:** Proposto
 **Data:** YYYY-MM-DD
-**Autora:** Sophie Pyxis de Paula
+**Autora:** {{PRINCIPAL_ARCHITECT}}
 **Nível:** 2 - Componente
 **Squads afetados:** [lista]
 

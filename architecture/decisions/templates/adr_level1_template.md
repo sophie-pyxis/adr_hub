@@ -2,10 +2,10 @@
 title: "[Título da decisão]"
 status: "Proposto"
 date: "YYYY-MM-DD"
-autora: "Sophie Pyxis de Paula"
+autora: "{{PRINCIPAL_ARCHITECT}}"
 level: 1
 level_name: "Operacional"
-decides: "Sophie"
+decides: "{{PRINCIPAL_ARCHITECT}}"
 approves: "—"
 notifies: "Tech Lead do squad afetado"
 sla: "imediato, documenta em até 24h"
@@ -17,7 +17,7 @@ squads: "[lista de squads afetados]"
 
 **Status:** Proposto
 **Data:** YYYY-MM-DD
-**Autora:** Sophie Pyxis de Paula
+**Autora:** {{PRINCIPAL_ARCHITECT}}
 **Nível:** 1 - Operacional
 **Squads afetados:** [lista]
 

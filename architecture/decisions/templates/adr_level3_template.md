@@ -2,25 +2,25 @@
 title: "[Título da decisão]"
 status: "Proposto"
 date: "YYYY-MM-DD"
-autora: "Sophie Pyxis de Paula"
+autora: "{{PRINCIPAL_ARCHITECT}}"
 level: 3
 level_name: "Plataforma"
-decides: "Sophie propõe"
-approves: "Thiago"
-notifies: "Rodrigo (Engineering), Tech Leads afetados"
+decides: "{{PRINCIPAL_ARCHITECT}} propõe"
+approves: "{{ARCHITECT_MANAGER}}"
+notifies: "{{ENGINEERING_MANAGER}} (Engineering), Tech Leads afetados"
 sla: "RFC aberto por mínimo 3 dias úteis antes da decisão"
 reversibility: "Difícil"
 revisores: "Tech Leads afetados"
-aprovador: "Thiago"
+aprovador: "{{ARCHITECT_MANAGER}}"
 ---
 
 # ADR-003-XXX: [Título da decisão]
 
 **Status:** Proposto
 **Data:** YYYY-MM-DD
-**Autora:** Sophie Pyxis de Paula
+**Autora:** {{PRINCIPAL_ARCHITECT}}
 **Revisores:** Tech Leads afetados
-**Aprovador:** Thiago
+**Aprovador:** {{ARCHITECT_MANAGER}}
 **Nível:** 3 - Plataforma
 **Princípios aplicáveis:** [referência aos Princípios Nível 5]
 

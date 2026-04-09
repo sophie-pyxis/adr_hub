@@ -2,11 +2,11 @@
 title: "[Título do princípio]"
 status: "Proposto"
 date: "YYYY-MM-DD"
-autora: "Sophie Pyxis de Paula"
+autora: "{{PRINCIPAL_ARCHITECT}}"
 level: 5
 level_name: "Princípio"
-decides: "Sophie propõe"
-approves: "Thiago aprova, Silvana endossa"
+decides: "{{PRINCIPAL_ARCHITECT}} propõe"
+approves: "{{ARCHITECT_MANAGER}} aprova, {{BUSINESS_MANAGER}} endossa"
 notifies: "toda a organização técnica"
 sla: "ciclo de revisão semestral"
 reversibility: "Ciclo semestral"
@@ -18,8 +18,8 @@ principio: true
 
 **Status:** Proposto
 **Data:** YYYY-MM-DD
-**Autora:** Sophie Pyxis de Paula
-**Aprovador:** Thiago aprova, Silvana endossa
+**Autora:** {{PRINCIPAL_ARCHITECT}}
+**Aprovador:** {{ARCHITECT_MANAGER}} aprova, {{BUSINESS_MANAGER}} endossa
 **Nível:** 5 - Princípio
 **Ciclo de revisão:** semestral
 
