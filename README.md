@@ -706,7 +706,7 @@ volumes:
 
 ## Solutions Architect Handbook
 
-For comprehensive guidance on implementing, operating, and extending ADR Hub in enterprise environments, refer to the [Solutions Architect Handbook](SOLUTIONS_ARCHITECT_HANDBOOK.md).
+For comprehensive guidance on implementing, operating, and extending ADR Hub in enterprise environments, refer to the [Solutions Architect Handbook](SOLUTIONS_ARCHITECT_HANDBOOK.md) (also available in [Brazilian Portuguese](SOLUTIONS_ARCHITECT_HANDBOOK_PT-BR.md)).
 
 The handbook provides detailed information for solution architects and enterprise architects, including:
 
