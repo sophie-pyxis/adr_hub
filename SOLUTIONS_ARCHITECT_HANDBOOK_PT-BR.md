@@ -4,7 +4,7 @@
 
 **ADR Hub** é um sistema de gerenciamento de Registros de Decisões de Arquitetura (ADR) de nível corporativo, projetado para transformar a governança de arquitetura de arquivos markdown dispersos em um sistema consultável e auditável. Este manual fornece aos arquitetos de soluções e arquitetos empresariais orientações abrangentes para implementar, operar e estender a plataforma ADR Hub.
 
-**Autor**: Sophie Pyxis ([LinkedIn](https://www.linkedin.com/in/sophie-pyxis) | [GitHub](https://github.com/sophie-pyxis))
+**Autora**: Sophie Pyxis ([LinkedIn](https://www.linkedin.com/in/sophie-pyxis) | [GitHub](https://github.com/sophie-pyxis))
 
 *Contribuições e insights de Scarlet Rose, Arquiteta de Soluções no Itaú: [LinkedIn](https://www.linkedin.com/in/scarletrose/) | [GitHub](https://github.com/scarletquasar) | [Canal do YouTube](https://www.youtube.com/watch?v=MYq4v6S8BHE)*
 
